@@ -11,6 +11,22 @@ report_cleanup:
   max_age: 7    # 保留最近7天的报告
   cron_schedule: "0 0 * * *" # 如果为空，则执行执行上面定时任务，即生成报告时清理
 
+# 配置发送钉钉和邮件
+notifications:
+  dingtalk:
+    enabled: false
+    webhook: "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxx"
+    secret: "xxxxxxx" 
+  email:
+    enabled: true
+    smtp_host: "smtp.163.com"
+    smtp_port: 465
+    username: "xxx@163.com"
+    password: "xxxxxxxxx"
+    from: "xxxxx@163.com"
+    to: 
+      - "xxxx@163.com"
+
 metric_types:
   - type: "基础资源使用情况"
     metrics:
@@ -60,21 +76,21 @@ metric_types:
           instance: "节点"
 
 
-  - type: "PaaS平台巡检"
-    metrics:
-      - name: "K8s集群关键服务"
-        description: "K8s集群关键服务状态统计"
-        query: "key_pod_status"
-        threshold: 1 
-        threshold_type: "equal"
-        unit: ""
-        labels:
-          component: "服务名称"
-          namespace: "命名空间"
-          # describe: "服务描述"
-          hostname: "主机名称"
-          owner: "负责人"
-          instance: "节点"
+  # - type: "PaaS平台巡检"
+  #   metrics:
+  #     - name: "K8s集群关键服务"
+  #       description: "K8s集群关键服务状态统计"
+  #       query: "key_pod_status"
+  #       threshold: 1 
+  #       threshold_type: "equal"
+  #       unit: ""
+  #       labels:
+  #         component: "服务名称"
+  #         namespace: "命名空间"
+  #         # describe: "服务描述"
+  #         hostname: "主机名称"
+  #         owner: "负责人"
+  #         instance: "节点"
 
   - type: "kubernetes集群监控状态"
     metrics:

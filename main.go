@@ -14,6 +14,8 @@ import (
 	"PromAI/pkg/prometheus"
 	"PromAI/pkg/report"
 	"PromAI/pkg/status"
+	"PromAI/pkg/notify"
+	"PromAI/pkg/utils"
 
 	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v2"
@@ -60,6 +62,8 @@ func main() {
 	port := flag.String("port", "8091", "Port to run the HTTP server on")
 	flag.Parse()
 
+	utils.SetGlobalPort(*port)
+
 	client, config, err := setup(*configPath)
 	if err != nil {
 		log.Fatalf("Error setting up: %v", err)
@@ -83,6 +87,20 @@ func main() {
 				return
 			}
 			log.Printf("定时任务成功生成报告: %s", reportFilePath)
+
+			if config.Notifications.Dingtalk.Enabled {
+				log.Printf("发送钉钉消息")
+				if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+					log.Printf("发送钉钉消息失败: %v", err)
+				}
+			}
+
+			if config.Notifications.Email.Enabled {
+				log.Printf("发送邮件")
+				notify.SendEmail(config.Notifications.Email, reportFilePath)
+			}
+
+			
 		})
 
 		if err != nil {
