@@ -177,6 +177,13 @@ go build -o PromAI main.go
         </a>
     </td>
     <td align="center">
+        <a href="https://github.com/liushiju">
+            <img src="https://avatars.githubusercontent.com/u/34912508?v=4" width="100;" alt="liushiju"/>
+            <br />
+            <sub><b>Shiju Liu</b></sub>
+        </a>
+    </td>
+    <td align="center">
         <a href="https://github.com/wevsmy">
             <img src="https://avatars.githubusercontent.com/u/26675374?v=4" width="100;" alt="wevsmy"/>
             <br />
