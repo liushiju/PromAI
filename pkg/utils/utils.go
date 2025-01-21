@@ -60,3 +60,13 @@ func GetServiceAddress() string {
 	}
 	return "localhost"
 }
+
+func GetServicePort() string {
+	port := os.Getenv("HOST_PORT")
+	if port != "" {
+		return port
+	} else {
+		port = GetGlobalPort()
+	}
+	return port
+}

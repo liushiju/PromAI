@@ -76,7 +76,7 @@ func SendDingtalk(config DingtalkConfig, reportPath string) error {
 	}
 	part.Write(fileContent)
 
-	port := utils.GetGlobalPort()
+	port := utils.GetServicePort()
 	ip := utils.GetServiceAddress()
 	// 添加消息内容
 	messageContent := map[string]interface{}{
@@ -149,7 +149,7 @@ func SendEmail(config EmailConfig, reportPath string) error {
 	e.Subject = "巡检报告"
 
 	// 设置邮件正文
-	port := utils.GetGlobalPort()
+	port := utils.GetServicePort()
 	ip := utils.GetServiceAddress()
 
 	// 添加更丰富的邮件内容
