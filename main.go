@@ -11,9 +11,11 @@ import (
 
 	"PromAI/pkg/config"
 	"PromAI/pkg/metrics"
+	"PromAI/pkg/notify"
 	"PromAI/pkg/prometheus"
 	"PromAI/pkg/report"
 	"PromAI/pkg/status"
+	"PromAI/pkg/utils"
 
 	"github.com/robfig/cron/v3"
 	"gopkg.in/yaml.v2"
@@ -77,12 +79,45 @@ func main() {
 				return
 			}
 
-			reportFilePath, err := report.GenerateReport(*data)
+			reportFilePath, warnCount, criticalCount, err := report.GenerateReport(*data)
 			if err != nil {
 				log.Printf("定时任务生成报告失败: %v", err)
 				return
 			}
 			log.Printf("定时任务成功生成报告: %s", reportFilePath)
+			log.Printf("告警数: %+v", warnCount)
+			log.Printf("严重数: %+v", criticalCount)
+			if config.Notifications.Dingtalk.Enabled {
+				if config.Notifications.Alert {
+					log.Printf("发送钉钉消息")
+					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+						log.Printf("发送钉钉消息失败: %v", err)
+					}
+					return
+				} else if warnCount > 0 || criticalCount > 0 {
+					log.Printf("存在告警，发送钉钉消息")
+					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+						log.Printf("发送钉钉消息失败: %v", err)
+					}
+					return
+				}
+				log.Printf("不存在告警，不发送钉钉消息")
+				return
+			}
+
+			if config.Notifications.Email.Enabled {
+				if config.Notifications.Alert {
+					log.Printf("发送邮件")
+					notify.SendEmail(config.Notifications.Email, reportFilePath)
+					return
+				} else if warnCount > 0 || criticalCount > 0 {
+					log.Printf("存在告警，发送邮件")
+					notify.SendEmail(config.Notifications.Email, reportFilePath)
+					return
+				}
+				log.Printf("不存在告警，不发送邮件")
+				return
+			}
 		})
 
 		if err != nil {
@@ -158,7 +193,7 @@ func makeReportHandler(collector *metrics.Collector) http.HandlerFunc {
 			return
 		}
 
-		reportFilePath, err := report.GenerateReport(*data)
+		reportFilePath, _, _, err := report.GenerateReport(*data)
 		if err != nil {
 			http.Error(w, "Failed to generate report", http.StatusInternalServerError)
 			log.Printf("Error generating report: %v", err)

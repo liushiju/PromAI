@@ -61,7 +61,9 @@ func GetStatusText(status string) string {
 	}
 }
 
-func GenerateReport(data ReportData) (string, error) {
+func GenerateReport(data ReportData) (string, int, int, error) {
+	WarnCount := 0
+	CriticalCount := 0
 	// 计算每个组的统计信息
 	for _, group := range data.MetricGroups {
 		stats := GroupStats{
@@ -83,9 +85,11 @@ func GenerateReport(data ReportData) (string, error) {
 				case "warning":
 					stats.WarningCount++
 					stats.AlertCount++
+					WarnCount = stats.WarningCount
 				case "critical":
 					stats.CriticalCount++
 					stats.AlertCount++
+					CriticalCount = stats.CriticalCount
 				}
 			}
 		}
@@ -171,24 +175,24 @@ func GenerateReport(data ReportData) (string, error) {
 	// 生成报告
 	tmpl, err := template.ParseFiles("templates/report.html")
 	if err != nil {
-		return "", fmt.Errorf("parsing template: %w", err)
+		return "", 0, 0, fmt.Errorf("parsing template: %w", err)
 	}
 
 	// 创建输出文件
 	filename := fmt.Sprintf("reports/inspection_report_%s.html", time.Now().Format("20060102_150405"))
 	file, err := os.Create(filename)
 	if err != nil {
-		return "", fmt.Errorf("creating output file: %w", err)
+		return "", 0, 0, fmt.Errorf("creating output file: %w", err)
 	}
 	defer file.Close()
 
 	// 执行模板
 	if err := tmpl.Execute(file, data); err != nil {
-		return "", fmt.Errorf("executing template: %w", err)
+		return "", 0, 0, fmt.Errorf("executing template: %w", err)
 	}
 
 	// log.Println("Report generated successfully:", filename)
 	log.Printf("项目[%s]报告生成成功: %s", data.Project, filename)
 
-	return filename, nil // 添加返回语句
+	return filename, WarnCount, CriticalCount, nil // 添加返回语句
 }
