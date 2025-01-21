@@ -62,6 +62,8 @@ func main() {
 	port := flag.String("port", "8091", "Port to run the HTTP server on")
 	flag.Parse()
 
+	utils.SetGlobalPort(*port)
+
 	client, config, err := setup(*configPath)
 	if err != nil {
 		log.Fatalf("Error setting up: %v", err)

@@ -82,21 +82,21 @@ metric_types:
           instance: "节点"
 
 
-  - type: "PaaS平台巡检"
-    metrics:
-      - name: "K8s集群关键服务"
-        description: "K8s集群关键服务状态统计"
-        query: "key_pod_status"
-        threshold: 1 
-        threshold_type: "equal"
-        unit: ""
-        labels:
-          component: "服务名称"
-          namespace: "命名空间"
-          # describe: "服务描述"
-          hostname: "主机名称"
-          owner: "负责人"
-          instance: "节点"
+  # - type: "PaaS平台巡检"
+  #   metrics:
+  #     - name: "K8s集群关键服务"
+  #       description: "K8s集群关键服务状态统计"
+  #       query: "key_pod_status"
+  #       threshold: 1 
+  #       threshold_type: "equal"
+  #       unit: ""
+  #       labels:
+  #         component: "服务名称"
+  #         namespace: "命名空间"
+  #         # describe: "服务描述"
+  #         hostname: "主机名称"
+  #         owner: "负责人"
+  #         instance: "节点"
 
   - type: "kubernetes集群监控状态"
     metrics:
