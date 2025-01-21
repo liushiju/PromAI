@@ -1,8 +1,8 @@
 package config
 
-import "PromAI/pkg/notify"
-
-import "PromAI/pkg/notify"
+import (
+	"PromAI/pkg/notify"
+)
 
 type Config struct {
 	PrometheusURL string       `yaml:"prometheus_url"`
@@ -10,8 +10,6 @@ type Config struct {
 	ProjectName   string       `yaml:"project_name"`
 	CronSchedule  string       `yaml:"cron_schedule"`
 	ReportCleanup struct {
-		Enabled      bool   `yaml:"enabled"`
-		MaxAge       int    `yaml:"max_age"`
 		Enabled      bool   `yaml:"enabled"`
 		MaxAge       int    `yaml:"max_age"`
 		CronSchedule string `yaml:"cron_schedule"`
