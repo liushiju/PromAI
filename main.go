@@ -96,15 +96,22 @@ func main() {
 						log.Printf("发送钉钉消息失败: %v", err)
 					}
 					return
-				} else if warnCount > 0 || criticalCount > 0 {
+				} else if criticalCount > 0 {
+					log.Printf("存在严重告警，发送钉钉消息")
+					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+						log.Printf("发送钉钉消息失败: %v", err)
+					}
+					return
+				} else if warnCount > 0 {
 					log.Printf("存在告警，发送钉钉消息")
 					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
 						log.Printf("发送钉钉消息失败: %v", err)
 					}
 					return
+				} else {
+					log.Printf("不存在告警，不发送钉钉消息")
+					return
 				}
-				log.Printf("不存在告警，不发送钉钉消息")
-				return
 			}
 
 			if config.Notifications.Email.Enabled {
@@ -112,13 +119,18 @@ func main() {
 					log.Printf("发送邮件")
 					notify.SendEmail(config.Notifications.Email, reportFilePath)
 					return
-				} else if warnCount > 0 || criticalCount > 0 {
+				} else if criticalCount > 0 {
+					log.Printf("存在严重告警，发送邮件")
+					notify.SendEmail(config.Notifications.Email, reportFilePath)
+					return
+				} else if warnCount > 0 {
 					log.Printf("存在告警，发送邮件")
 					notify.SendEmail(config.Notifications.Email, reportFilePath)
 					return
+				} else {
+					log.Printf("不存在告警，不发送邮件")
+					return
 				}
-				log.Printf("不存在告警，不发送邮件")
-				return
 			}
 		})
 

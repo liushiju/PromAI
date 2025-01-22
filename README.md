@@ -119,8 +119,9 @@ equal: 表示值必须等于阈值才被视为 "normal" 状态。
 
 ### Docker 部署
 
+- 容器化部署需要设置HOST_IP和HOST_PORT，默认HOST_IP为宿主机127.0.0.1，HOST_PORT为8091
 ```bash
-docker run -d --name PromAI -p 8091:8091 kubehan/promai:latest
+docker run -d --name PromAI -e HOST_IP="xx.xx.xx.xx" -e HOST_PORT=8091 -p 8091:8091 kubehan/promai:latest
 ```
 
 ### Kubernetes 部署

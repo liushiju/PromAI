@@ -1,0 +1,215 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promai
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promai-deployment
+  namespace: promai
+  labels:
+    app: promai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: promai
+  template:
+    metadata:
+      labels:
+        app: promai
+    spec:
+      containers:
+        - name: promai
+          image: kubehan/promai:latest
+          env:
+            - name: HOST_IP
+              value: "10.0.10.200"  # 填入实际的 IP 地址
+            - name: HOST_PORT
+              value: "30080"
+          ports:
+            - containerPort: 8091
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: promai-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promai-config
+  namespace: promai
+data:
+  config.yaml: |
+    prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
+    project_name: "测试项目"
+
+    # 定时任务：每天9点和18执行
+    cron_schedule: "0 9,18 * * *"
+
+    # 报告清理
+    report_cleanup:
+      enabled: true
+      max_age: 7    # 保留最近7天的报告
+      cron_schedule: "0 0 * * *" # 如果为空，则执行执行上面定时任务，即生成报告时清理
+
+    # 配置发送钉钉和邮件
+    notifications:
+      # 添加字段初衷，某些场景下，即使巡检结果正常，也需要发送钉钉或邮件通知，
+      # 当alert为true时，不管巡检结果如何，都会发送钉钉或邮件通知
+      # 当alert为false时，会根据巡检定时任务执行结果，包含异常时，会发送钉钉或邮件通知
+      alert: false
+      dingtalk:
+        enabled: true
+        webhook: "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxx"
+        # 钉钉机器人安全设置中的加签密钥
+        secret: "xxxxxx" 
+      email:
+        enabled: false
+        smtp_host: "smtp.163.com"
+        smtp_port: 465
+        username: "xxx@163.com"
+        password: "xxxxxxxxx"
+        from: "xxxxx@163.com"
+        to: 
+          - "xxxx@163.com"
+
+    metric_types:
+      - type: "基础资源使用情况"
+        metrics:
+          - name: "CPU使用率"
+            description: "节点CPU使用率统计"
+            query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+            threshold: 80
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+          
+          - name: "内存使用率"
+            description: "节点内存使用率统计"
+            query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
+            threshold: 85
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+
+          - name: "磁盘使用率"
+            description: "节点磁盘使用率统计"
+            query: >-
+              (((100 -((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes)) 
+              and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint!~"/run.*|/var.*|/boot.*|/tmp.*"}== 0) 
+              + on(instance) group_left(node_uname_info) node_uname_info) 
+              * on(instance) group_left(nodename) node_uname_info
+            threshold: 80
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+              mountpoint: "挂载点"
+              device: "磁盘"
+              nodename: "节点名称"
+
+
+          - name: "固定机器内存使用率"
+            description: "固定机器内存使用率统计"
+            query: >-
+              100 - ((node_memory_MemAvailable_bytes{instance="172.16.5.132:9100"} * 100) / node_memory_MemTotal_bytes{instance="172.16.5.132:9100"})
+            threshold: 16.84
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+
+
+      # - type: "PaaS平台巡检"
+      #   metrics:
+      #     - name: "K8s集群关键服务"
+      #       description: "K8s集群关键服务状态统计"
+      #       query: "key_pod_status"
+      #       threshold: 1 
+      #       threshold_type: "equal"
+      #       unit: ""
+      #       labels:
+      #         component: "服务名称"
+      #         namespace: "命名空间"
+      #         # describe: "服务描述"
+      #         hostname: "主机名称"
+      #         owner: "负责人"
+      #         instance: "节点"
+
+      - type: "kubernetes集群监控状态"
+        metrics:
+          - name: "K8s集群巡检"
+            description: "K8s集群巡检"
+            query: "k8s_cluster_auto_check"
+            threshold: 1
+            threshold_type: "equal" 
+            unit: ""
+            labels:
+              component: "服务名称"
+              hostname: "主机名称"
+              owner: "负责人"
+
+          - name: "自定义监控脚本执行情况"
+            description: "script-exporter监控脚本执行情况"
+            query: "script_success"
+            threshold: 1
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              instance: "宿主机器"
+              script: "脚本名称"
+    
+          - name: "Pod运行状态"
+            description: "集群Pod运行状态统计"
+            query: "sum by (namespace, pod) (kube_pod_status_phase{phase='Running',namespace='kube-system'})"
+            threshold: 1
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              namespace: "命名空间"
+              pod: "Pod名称"
+
+          - name: "节点就绪状态"
+            description: "K8s节点就绪状态检查"
+            query: "kube_node_status_condition{condition='Ready',status!='true'}"
+            threshold: 0
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              node: "节点"
+              condition: "状态类型"
+
+          - name: "PVC使用率"
+            description: "持久化存储使用率"
+            query: >-
+              100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
+            threshold: 90
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              namespace: "命名空间"
+              persistentvolumeclaim: "PVC名称"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: promai-service
+  namespace: promai
+spec:
+  selector:
+    app: promai
+  ports:
+    - protocol: TCP
+      port: 8091
+      targetPort: 8091
+      nodePort: 30080
+  type: NodePort
