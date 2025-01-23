@@ -1,9 +1,12 @@
-prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
+# prometheus_url: "http://prometheus.monitoring.svc.cluster.local:9090"
+prometheus_url: "http://10.0.10.200:9090"
+
 
 project_name: "测试项目"
 
 # 定时任务：每天9点和18执行
-cron_schedule: "0 9,18 * * *"
+# cron_schedule: "0 9,18 * * *"
+cron_schedule: "*/1 * * * *"
 
 # 报告清理
 report_cleanup:
@@ -19,9 +22,9 @@ notifications:
   alert: false
   dingtalk:
     enabled: true
-    webhook: "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxx"
+    webhook: "https://oapi.dingtalk.com/robot/send?access_token=898d4a9c1847df8366efa8a602a41c617166af4549eb139bea6229c6ce3f4003"
     # 钉钉机器人安全设置中的加签密钥
-    secret: "xxxxxx" 
+    secret: "SEC27695fc42690c26d2a85ea7a993ec5a0affff36f14706832ada650178c0e2346" 
   email:
     enabled: false
     smtp_host: "smtp.163.com"

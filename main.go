@@ -70,6 +70,7 @@ func main() {
 	}
 
 	collector := metrics.NewCollector(client.API, config)
+	projectName := config.ProjectName
 
 	// 设置定时任务
 	if config.CronSchedule != "" {
@@ -92,19 +93,19 @@ func main() {
 			if config.Notifications.Dingtalk.Enabled {
 				if config.Notifications.Alert {
 					log.Printf("发送钉钉消息")
-					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath, projectName); err != nil {
 						log.Printf("发送钉钉消息失败: %v", err)
 					}
 					return
 				} else if criticalCount > 0 {
 					log.Printf("存在严重告警，发送钉钉消息")
-					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath, projectName); err != nil {
 						log.Printf("发送钉钉消息失败: %v", err)
 					}
 					return
 				} else if warnCount > 0 {
 					log.Printf("存在告警，发送钉钉消息")
-					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath); err != nil {
+					if err := notify.SendDingtalk(config.Notifications.Dingtalk, reportFilePath, projectName); err != nil {
 						log.Printf("发送钉钉消息失败: %v", err)
 					}
 					return
@@ -117,15 +118,15 @@ func main() {
 			if config.Notifications.Email.Enabled {
 				if config.Notifications.Alert {
 					log.Printf("发送邮件")
-					notify.SendEmail(config.Notifications.Email, reportFilePath)
+					notify.SendEmail(config.Notifications.Email, reportFilePath, projectName)
 					return
 				} else if criticalCount > 0 {
 					log.Printf("存在严重告警，发送邮件")
-					notify.SendEmail(config.Notifications.Email, reportFilePath)
+					notify.SendEmail(config.Notifications.Email, reportFilePath, projectName)
 					return
 				} else if warnCount > 0 {
 					log.Printf("存在告警，发送邮件")
-					notify.SendEmail(config.Notifications.Email, reportFilePath)
+					notify.SendEmail(config.Notifications.Email, reportFilePath, projectName)
 					return
 				} else {
 					log.Printf("不存在告警，不发送邮件")

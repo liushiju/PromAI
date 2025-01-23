@@ -39,7 +39,7 @@ type EmailConfig struct {
 }
 
 // SendDingtalk 发送钉钉通知
-func SendDingtalk(config DingtalkConfig, reportPath string) error {
+func SendDingtalk(config DingtalkConfig, reportPath string, projectName string) error {
 	if !config.Enabled {
 		log.Printf("钉钉通知未启用")
 		return nil
@@ -82,8 +82,8 @@ func SendDingtalk(config DingtalkConfig, reportPath string) error {
 	messageContent := map[string]interface{}{
 		"msgtype": "markdown",
 		"markdown": map[string]string{
-			"title": "巡检报告",
-			"text": fmt.Sprintf("## 🔍 巡检报告已生成\n\n"+
+			"title": fmt.Sprintf("%s - 巡检报告", projectName),
+			"text": fmt.Sprintf("## 🔍 %s - 巡检报告\n\n"+
 				"### ⏰ 生成时间\n"+
 				"> %s\n\n"+
 				"### 📄 报告详情\n"+
@@ -91,6 +91,7 @@ func SendDingtalk(config DingtalkConfig, reportPath string) error {
 				"- **访问链接**：[点击查看报告](http://%s:%s/reports/%s)\n\n"+
 				"---\n"+
 				"💡 请登录环境查看完整报告内容",
+				projectName,
 				time.Now().Format("2006-01-02 15:04:05"),
 				filepath.Base(reportPath),
 				ip,
@@ -132,7 +133,7 @@ func SendDingtalk(config DingtalkConfig, reportPath string) error {
 }
 
 // SendEmail 发送邮件通知
-func SendEmail(config EmailConfig, reportPath string) error {
+func SendEmail(config EmailConfig, reportPath string, projectName string) error {
 	if !config.Enabled {
 		log.Printf("邮件通知未启用")
 		return nil
@@ -146,20 +147,24 @@ func SendEmail(config EmailConfig, reportPath string) error {
 	e := email.NewEmail()
 	e.From = config.From
 	e.To = config.To
-	e.Subject = "巡检报告"
+	projectTitle := "巡检报告"
+	if projectName != "" {
+		projectTitle = fmt.Sprintf("%s - 巡检报告", projectName)
+	}
+	e.Subject = projectTitle
 
 	// 设置邮件正文
 	port := utils.GetServicePort()
 	ip := utils.GetServiceAddress()
-
 	// 添加更丰富的邮件内容
 	e.HTML = []byte(fmt.Sprintf(`
-        <h2>🔍 巡检报告已生成</h2>
+        <h2>🔍 %s</h2>
         <p><strong>⏰ 生成时间：</strong>%s</p>
         <p><strong>📄 报告文件：</strong>%s</p>
         <p><strong>在线查看：</strong><a href="http://%s:%s/reports/%s">点击查看报告</a></p>
         <p><strong>💡 请登录环境查看完整报告内容!</strong></p>
     `,
+		projectTitle,
 		time.Now().Format("2006-01-02 15:04:05"),
 		filepath.Base(reportPath),
 		ip,
