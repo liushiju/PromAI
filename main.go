@@ -178,8 +178,8 @@ func main() {
 	// 启动服务器
 	log.Printf("Starting server on port: %s with config: %s", *port, *configPath)
 	log.Printf("Prometheus URL: %s", config.PrometheusURL)
-	log.Printf("获取报告地址: http://localhost:%s/getreport", *port)
-	log.Printf("健康看板地址: http://localhost:%s/status", *port)
+	log.Printf("获取报告地址: http://%s:%s/getreport", utils.GetServiceAddress, utils.GetServicePort)
+	log.Printf("健康看板地址: http://%s:%s/status", utils.GetServiceAddress, utils.GetServicePort)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
 		log.Fatalf("Error starting HTTP server: %v", err)
 	}
