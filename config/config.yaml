@@ -1,3 +1,5 @@
+## 使用K8s部署时候将该文件创建为configmap，然后挂载到容器中
+# PromAI配置文件
 prometheus_url: "http://prometheus-k8s.monitoring.svc.cluster.local:9090"
 
 # 多数据源配置
