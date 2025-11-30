@@ -297,6 +297,11 @@ http://localhost:8091/api/promai/getreport
 </table>
 <!-- readme: collaborators,contributors -end -->
 
+## 联系我们
+微信扫码添加我为好友，备注“PromAI”，即可加入PromAI交流群。
+微信号：Kubehan
+微信公众号：云原生知识栈
+![1764516172438](image/README/1764516172438.png)
 ## 许可证
 
 该项目采用 MIT 许可证，详细信息请查看 LICENSE 文件。
