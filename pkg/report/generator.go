@@ -48,6 +48,7 @@ type ReportData struct {
 	MetricGroups map[string]*MetricGroup
 	ChartData    map[string]template.JS
 	Project      string
+	Datasource   string
 }
 
 func GetStatusText(status string) string {
@@ -70,10 +71,13 @@ func GenerateReport(data ReportData) (string, error) {
 
 		for _, metrics := range group.MetricsByName {
 			for _, metric := range metrics {
-				// 更新最大最小值
-				stats.MaxValue = math.Max(stats.MaxValue, metric.Value)
-				stats.MinValue = math.Min(stats.MinValue, metric.Value)
-				stats.TotalCount++
+				// 检查metric.Value是否为有效数值
+				if !math.IsNaN(metric.Value) && !math.IsInf(metric.Value, 0) {
+					// 更新最大最小值
+					stats.MaxValue = math.Max(stats.MaxValue, metric.Value)
+					stats.MinValue = math.Min(stats.MinValue, metric.Value)
+					stats.TotalCount++
+				}
 
 				// 累加值用于计算平均值
 				// stats.Average += metric.Value
@@ -87,6 +91,17 @@ func GenerateReport(data ReportData) (string, error) {
 					stats.CriticalCount++
 					stats.AlertCount++
 				}
+			}
+		}
+
+		// 处理没有有效数据的情况
+		if stats.TotalCount == 0 {
+			stats.MaxValue = 0
+			stats.MinValue = 0
+		} else {
+			// 确保最小值没有被设置为math.MaxFloat64（当所有值都相同时）
+			if stats.MinValue == math.MaxFloat64 {
+				stats.MinValue = stats.MaxValue
 			}
 		}
 

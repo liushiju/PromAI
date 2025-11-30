@@ -1,12 +1,20 @@
-prometheus_url: "http://prometheus-k8s.kubesphere-monitoring-system.svc.cluster.local:9090"
+prometheus_url: "http://prometheus-k8s.monitoring.svc.cluster.local:9090"
 
+# 多数据源配置
+data_sources:
+  - name: "cluster1"
+    url: "http://prometheus.k8s.monitoring.kubehan.cn"
+  - name: "cluster2"
+    url: "http://prometheus.monitoring.kubehan.cn"
+  - name: "test-cluster"
+    url: "http://prometheus.monitoring.kubehan.cn"
 
-project_name: "测试项目巡检报告"
+project_name: "巡检报告"
 
 
 # 定时任务：每天9点半和17半执行
 
-cron_schedule: "30 9,17 * * *"
+cron_schedule: "00 08,17 * * *"
 
 
 # 报告清理
@@ -20,12 +28,12 @@ report_cleanup:
 
 notifications:
   dingtalk:
-    enabled: true
+    enabled: false
     webhook: "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # 这里填写自己的webhook
     secret: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # 这里填写的是加钉钉机器人加签的secret
     report_url: "http://192.168.5.125:41174"  # 这里可以填写ip+端口，也可以填写域名,如果是k8s里部署，推荐采用域名的方式，如果不行可以将 svc 以nodeport方式暴露出来，这里就可以使用ip+端口方式
   email:
-    enabled: true
+    enabled: false
     smtp_host: "smtp.exmail.qq.com"  # 我这里用的是腾讯企业邮箱，需要改成自己的
     smtp_port: 465
     username: "demo@demo.cn"  # 填写自己的邮箱账号
@@ -33,123 +41,903 @@ notifications:
     from: "demo@demo.cn"
     to:
       - "demo@demo.cn"
-    report_url: "https://promai.lichengjun.top"  # 这里可以填写ip+端口，也可以填写域名，如果是k8s里部署，推荐采用域名的方式，如果不行可以将 svc 以nodeport方式暴露出来，这里就可以使用ip+端口方式,如果是部署在k8s里，ingress 的需要自己去编写
+    report_url: "https://promai.kubehan.cn"  # 这里可以填写ip+端口，也可以填写域名，如果是k8s里部署，推荐采用域名的方式，如果不行可以将 svc 以nodeport方式暴露出来，这里就可以使用ip+端口方式,如果是部署在k8s里，ingress 的需要自己去编写
+  wechat_work:
+    enabled: true  # 是否启用企业微信通知
+    webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=0c4ef257-a6f0-430c-b454-d2b82bbd6e53"  # 企业微信机器人webhook地址
+    proxy_url: ""  # HTTP代理地址，例如: http://proxy.example.com:8080 或 socks5://proxy.example.com:1080
+    report_url: "https://alert.intra.kubehan.cn"  # 报告访问地址
 
 metric_types:
-  - type: "基础资源使用情况"
+  - type: "L1-基础设施层：硬件设备监控"
     metrics:
-      - name: "CPU使用率"
-        description: "节点CPU使用率统计"
-        query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
-        threshold: 80
-        threshold_type: "greater"
-        unit: "%"
-        labels:
-          instance: "节点"
-
-      - name: "内存使用率"
-        description: "节点内存使用率统计"
-        query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
-        threshold: 85
-        threshold_type: "greater"
-        unit: "%"
-        labels:
-          instance: "节点"
-
-      - name: "磁盘使用率"
-        description: "节点磁盘使用率统计"
+      - name: "CPU性能状态监控"
+        description: "CPU性能状态监控-1h内平均使用率"
         query: >-
-          (((100 -((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes))
-          and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint!~"/run.*|/var.*|/boot.*|/tmp.*"}== 0)
-          + on(instance) group_left(node_uname_info) node_uname_info)
-          * on(instance) group_left(nodename) node_uname_info
-        threshold: 80
+          avg_over_time(
+            (
+              100 - avg by(instance, nodename) (irate(node_cpu_seconds_total{mode='idle'}[5m]) * 100)
+            )[1h:]
+          ) * on(instance) group_left(nodename) node_uname_info
+        threshold: 99
         threshold_type: "greater"
         unit: "%"
         labels:
-          instance: "节点"
-          mountpoint: "挂载点"
-          device: "磁盘"
-          nodename: "节点名称"
-
-
-      - name: "固定机器内存使用率"
-        description: "固定机器内存使用率统计"
+          # nodename: "主机名"
+          instance: "实例地址"
+      - name: "机器负载与CPU核心数比率监控"
         query: >-
-          100 - ((node_memory_MemAvailable_bytes{instance="172.16.5.132:9100"} * 100) / node_memory_MemTotal_bytes{instance="172.16.5.132:9100"})
-        threshold: 16.84
+          (node_load5/count without (cpu, mode) (node_cpu_seconds_total{mode="system"}))* on(instance) group_left(nodename) (node_uname_info{nodename !~"hadoop.*"})
+        threshold: 3
+        threshold_type: "greater"
+        unit: "倍"
+        labels:
+          instance: "实例地址"
+          nodename: "主机名"
+          
+      - name: "内存性能状态监控"
+        query: "avg_over_time((100 - ((node_memory_MemAvailable_bytes * 100)/node_memory_MemTotal_bytes))[1h:]) * on(instance) group_left(nodename) node_uname_info"
+        threshold: 95
         threshold_type: "greater"
         unit: "%"
         labels:
-          instance: "节点"
+          # nodename: "主机名"
+          instance: "实例地址"
+
+      - name: "存储设备状态监控"
+        query: >-
+          (
+            (
+              (100 - (node_filesystem_avail_bytes * 100 / node_filesystem_size_bytes{mountpoint=~"/home|/mnt.*|/data.*|/opt.*"}))
+              and
+              ON (instance, device, mountpoint) node_filesystem_readonly == 0
+            )
+            * ON (instance) group_left(nodename) node_uname_info
+          )
+        threshold: 90
+        threshold_type: "greater"
+        threshold_status: "critical"
+        unit: "%"
+        labels:
+          nodename: "主机名"
+          instance: "实例地址"
+          device: "磁盘设备"
+          mountpoint: "盘路径"
 
 
-  # - type: "PaaS平台巡检"
-  #   metrics:
-  #     - name: "K8s集群关键服务"
-  #       description: "K8s集群关键服务状态统计"
-  #       query: "key_pod_status"
-  #       threshold: 1
-  #       threshold_type: "equal"
-  #       unit: ""
-  #       labels:
-  #         component: "服务名称"
-  #         namespace: "命名空间"
-  #         # describe: "服务描述"
-  #         hostname: "主机名称"
-  #         owner: "负责人"
-  #         instance: "节点"
+      - name: "磁盘读写IO性能监控3小时内平均使用率"
+        description: "磁盘读写IO性能监控-3小时内平均使用率"
+        query: 'min_over_time((rate(node_disk_io_time_seconds_total{}[5m]) * 100)[3h:5m]) >= 10'
+        threshold: 95
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          instance: "实例地址"
+          device: "磁盘设备"
+          service: "服务名称"
 
-  - type: "kubernetes集群监控状态"
+  - type: "L2-网络层：网络连接监控"
     metrics:
-      - name: "K8s集群巡检"
-        description: "K8s集群巡检"
-        query: "k8s_cluster_auto_check"
+      - name: "网络丢包率监控"
+        query: 'rate(node_network_receive_drop_total{device!~"cal.*"}[5m])'
+        threshold: 100
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+
+      - name: "网络连接负载监控"
+        query: "node_netstat_Tcp_CurrEstab{}"
+        threshold: 30000
+        threshold_type: "greater"
+        threshold_status: "critical"
+        unit: ""
+        labels:
+          instance: "实例地址"
+
+
+  - type: "L3-容器层：K8s运行环境核心服务监控"
+    metrics:
+      - name: "K8s Node 节点状态检查"
+        description: "Node 节点状态异常或宕机"
+        query: 'kube_node_status_condition{job="kube-state-metrics",condition="Ready",status="true"}  * on(node) group_left(label_hostname) (kube_node_labels{})'
         threshold: 1
         threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          node: "主机名"
+          instance: "实例地址"
+      
+      - name: K8s 基础组件健康状态检查
+        description: "K8s 基础组件健康状态检查"
+        query: 'up{job=~"kube.*"}'
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "组件名称"
+
+      - name: "集群核心网关服务状态监控--自定义监控建设中"
+      # calico,modtunnel,ssoauth,openapi,frontsso,coredns,
+        description: "K8s集群关键服务状态统计"
+        query: "key_pod_status"
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
         unit: ""
         labels:
           component: "服务名称"
+          describe: "服务描述"
           hostname: "主机名称"
           owner: "负责人"
 
-      - name: "自定义监控脚本执行情况"
-        description: "script-exporter监控脚本执行情况"
-        query: "script_success"
-        threshold: 1
+      - name: "系统关键Pod运行状态监控"
+      # calico,ingress,etcd,dns
+        description: "系统关键Pod运行状态监控"
+        query: >-
+          kube_pod_status_ready{condition="false",namespace=~"kube-system|.*prod.*|.*infra.*|.*es.*|monitoring|kong|proxy|loki",pod !~".*backup.*"}
+        threshold: 0
         threshold_type: "equal"
-        unit: ""
-        labels:
-          instance: "宿主机器"
-          script: "脚本名称"
-
-      - name: "Pod运行状态"
-        description: "集群Pod运行状态统计"
-        query: "sum by (namespace, pod) (kube_pod_status_phase{phase='Running',namespace='kube-system'})"
-        threshold: 1
-        threshold_type: "equal"
+        threshold_status: "normal"
         unit: ""
         labels:
           namespace: "命名空间"
-          pod: "Pod名称"
+          condition: "状态"
+          pod: "服务名称"
 
-      - name: "节点就绪状态"
-        description: "K8s节点就绪状态检查"
-        query: "kube_node_status_condition{condition='Ready',status!='true'}"
+
+      # - name: "自定义监控脚本执行情况"
+      #   description: "自定义监控脚本执行情况"
+      #   query: "script_success"
+      #   threshold: 1
+      #   threshold_type: "equal"
+      #   threshold_status: "normal"
+      #   unit: ""
+      #   labels:
+      #     instance: "实例地址"
+      #     script: "自定义脚本名称"
+      #     service: "servicemonitor名"
+
+      - name: "分布式存储etcd状态监控"
+        description: "分布式存储etcd状态监控"
+        query: "routing_etcd_node_status"
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          component: "服务组件"
+          describe: "描述"
+          target: "线上 or 线下"
+          hostname: "主机名称"
+          owner: "负责人"
+
+      - name: "DNS服务响应性能监控"
+        description: "DNS服务响应性能监控"
+        query: "histogram_quantile(0.99,sum(rate(coredns_dns_request_duration_seconds_bucket{}[5m])) by(le,job,instance,pod))"
+        threshold: 2
+        threshold_type: "greater"
+        unit: "s"
+        labels:
+          instance: "实例地址"
+          job: "服务名"
+          pod: "DNS服务节点"
+
+
+      - name: "容器CPU资源使用监控-1小时内平均使用率"
+        description: "容器CPU资源使用监控"
+        query: >-
+          100 * 
+          avg_over_time(
+            (
+              sum by(container, namespace, pod) (
+                rate(container_cpu_usage_seconds_total{
+                  container!="",
+                  namespace !~ ".*preview.*"
+                }[5m])
+              )
+              /
+              sum by(container, namespace, pod) (
+                kube_pod_container_resource_limits{
+                  container!="",
+                  resource="cpu",
+                  namespace !~ ".*preview.*"
+                }
+              )
+            )[1h:]
+          ) > 80
+        threshold: 95
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          namespace: "命名空间"
+          pod: "服务名称"
+
+
+      - name: "容器内存资源使用监控-1小时内平均使用率"
+        description: "容器内存资源使用监控"
+        query: >-
+            100 * 
+            avg_over_time(
+            (
+              sum by(container, namespace, pod) (
+                container_memory_working_set_bytes{
+                  container!="",
+                  container!="POD",
+                  namespace !~ ".*preview.*"
+                }
+              )
+              /
+              sum by(container, namespace, pod) (
+                kube_pod_container_resource_limits{
+                  container!="",
+                  container!="POD",
+                  resource="memory",
+                  namespace !~ ".*preview.*"
+                }
+              )
+            )[1h:]
+            ) > 80
+        threshold: 95
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          namespace: "命名空间"
+          pod: "服务名称"
+
+
+
+      # - name: "近5分钟p99coreDNS响应时延大于3s"
+      #   description: "近5分钟p99coreDNS响应时延大于3s"
+      #   query: >-
+      #     histogram_quantile(0.99,sum(rate(coredns_dns_request_duration_seconds_bucket{}[5m])) by(le,job,instance))
+      #   threshold: 3
+      #   threshold_type: "greater"
+      #   unit: "s"
+      #   labels:
+      #     instance: "实例地址"
+      #     job: "服务描述"
+
+
+      - name: "接入层路由服务健康监控"
+        description: "接入层路由服务健康监控"
+        query: >-
+          haproxy_up{service="routing-exporter"}
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          hostname: "主机名称"
+          instance: "实例地址"
+          pod: "服务名称"
+
+      - name: "节点Pod资源数量使用负载监控"
+        description: "节点Pod资源使用负载监控"
+        query: >-
+          count by(cluster, node) (
+            (kube_pod_status_phase{job="kube-state-metrics", phase="Running"} == 1)
+            * on(instance, pod, namespace, cluster) group_left(node)
+            kube_pod_info{job="kube-state-metrics"}
+          )
+          /
+          max by(cluster, node) (
+            kube_node_status_capacity{job="kube-state-metrics", resource="pods"}
+          ) > 0
+        threshold: 95
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          node: "主机名"
+
+      - name: "P90用户中心who接口5分钟内平均响应时长大于5s 告警"
+        description: "P90用户中心who接口5分钟内平均响应时长大于5s 告警"
+        query: >-
+          histogram_quantile(
+            0.9,
+            sum(rate(user_who_response_latency_seconds_bucket[5m]))
+              by (namespace, container, exported_endpoint, instance, le)
+          )
+        threshold: 10
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          namespace: "命名空间"
+          exported_endpoint: "url"
+
+      - name: " P90用户中心cas登录接口5分钟内平均响应时长大于5s 告警"
+        description: " P90用户中心cas登录接口5分钟内平均响应时长大于5s 告警"
+        query: >-
+          histogram_quantile(
+            0.9,
+            sum(rate(cas_js_login_response_latency_seconds_bucket[5m]))
+              by (namespace, container, exported_endpoint, instance, le)
+          )
+        threshold: 10
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          namespace: "命名空间"
+          exported_endpoint: "url"
+
+
+
+
+
+  #     # - name: "Pod CIDR 使用情况"
+  #     #   description: "Pod CIDR 使用情况"
+  #     #   query: >-
+  #     #     254 - count(kube_pod_info) by (node) <50
+  #     #   threshold: 45
+  #     #   threshold_type: "equal"
+  #     #   unit: ""
+  #     #   labels:
+  #     #     node: "节点IP"
+
+### 中间件 #######
+  - type: "L4-中间件层：MongoDB数据库监控"
+    metrics:
+      - name: "MongoDB副本集节点状态监控"
+        description: "MongoDB副本集节点状态监控"
+        query: "mongodb_replset_member_health"
+        threshold: 1
+        threshold_type: "not_equal"
+        unit: ""
+        labels:
+          job: "采集器名称"
+          name: "服务地址"
+
+      - name: "MongoDB复制延迟监控"
+        description: "MongoDB副本复制延迟监控"
+        query: >-
+          mongodb_mongod_replset_member_replication_lag or mongodb_replset_member_state
+        threshold: 60
+        threshold_type: "greater"
+        unit: "s"
+        labels:
+          job: "采集器名称"
+          name: "服务地址"
+          
+      - name: "MongoDB逻辑会话数监控"
+        description: "MongoDB逻辑会话数监控"
+        query: "mongodb_sessions_active_total OR mongodb_shard_active_sessions OR mongodb_rs_session_count"
+        threshold: 800000
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "主机地址"
+          job: "采集器名称"
+          shard: "分片信息"
+
+      - name: "MongoDB连接数监控"
+        description: "MongoDB连接数使用率监控"
+        query: 'avg by (instance) (mongodb_connections{state="current"}) / avg by (instance) (mongodb_connections{state="available"}) * 100'
+        threshold: 80
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          instance: "实例地址"
+
+      - name: "MongoDB内存使用率"
+        description: "MongoDB内存使用率监控"
+        query: '(max by(container, pod, node) (container_memory_working_set_bytes{container!="",container!="POD",pod=~".*mongo.*"}) / max by(container, pod, node) (kube_pod_container_resource_limits{container!="",container!="POD",pod=~".*mongo.*",resource="memory"})) * 100'
+        threshold: 95
+        threshold_type: "greater_equal"
+        unit: "%"
+        labels:
+          container: "实例地址"
+          pod: "pod信息"
+
+      - name: "MongoDB性能监控"
+        description: "MongoDB增删改查性能监控"
+        query: "mongodb_crud_time_ms or mongodb_operation_duration_seconds"
+        threshold: 3
+        threshold_type: "greater_equal"
+        unit: ""
+        labels:
+          instance: "主机地址"
+          shard: "副本信息"
+          operation: "具体操作类型"
+
+      - name: "MongoDB网络流量"
+        description: "MongoDB网络流量监控"
+        query: >-
+          rate(mongodb_network_bytes_total[1m])
+        threshold: 10000000
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          pod: "pod信息"
+          service: "分片信息"
+          state: "流量状态"
+
+      - name: "MongoDB服务宕机"
+        description: "MongoDB服务宕机监控"
+        query: "mongodb_up"
         threshold: 0
         threshold_type: "equal"
         unit: ""
         labels:
-          node: "节点"
-          condition: "状态类型"
+          instance: "实例地址"
+          pod: "pod信息"
+          job: "分片信息"
 
-      - name: "PVC使用率"
-        description: "持久化存储使用率"
+      - name: "MongoDB实例发生重启"
+        description: "MongoDB重启监控"
+        query: "mongodb_instance_uptime_seconds"
+        threshold: 60
+        threshold_type: "less"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          pod: "pod信息"
+          service: "分片信息"
+
+      - name: "MongoDB断言告警 - 需要立即检查"
+        description: "MongoDB数据损坏风险监控"
         query: >-
-          100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
-        threshold: 90
+          rate(mongodb_asserts_total{type=~"regular|message"}[5m])
+        threshold: 0
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "实例信息"
+          pod: "pod信息"
+          service: "分片信息"
+          type: "状态类型"
+
+      # - name: "MongoDB集群读写状态监控"
+      #   description: "MongoDB集群读写负载监控"
+      #   query: >-
+      #     (
+      #     mongodb_mongod_wiredtiger_concurrent_transactions_out_tickets
+      #     /
+      #     mongodb_mongod_wiredtiger_concurrent_transactions_total_tickets
+      #     )
+      #   threshold: 0.9
+      #   threshold_type: "greater"
+      #   unit: ""
+      #   labels:
+      #     job: "采集器名称"
+      #     name: "服务地址"
+      #     state: "服务状态"
+      #     instance: "实例地址"
+
+
+  - type: "L4-中间件层：MySQL数据库监控"
+    metrics:
+      - name: "MySQL连接数"
+        description: "MySQL连接数使用率监控"
+        query: "avg by (instance) (mysql_global_status_threads_connected) / avg by (instance) (mysql_global_variables_max_connections) * 100"
+        threshold: 80
         threshold_type: "greater"
         unit: "%"
         labels:
+          instance: "实例地址"
+
+      - name: "MySQL thread running监控"
+        description: "MySQL并发监控"
+        query: "mysql_global_status_threads_running"
+        threshold: 50
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "服务名"
+
+      - name: "MySQL活跃线程异常增长"
+        description: "MySQL活跃线程异常增长监控"
+        query: "rate(mysql_global_status_threads_created[5m])"
+        threshold: 10
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+
+      - name: "MySQL主从复制错误"
+        description: "MySQL主从复制错误监控"
+        query: "mysql_slave_status_last_io_errno"
+        threshold: 0
+        threshold_type: "not_equal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          master_host: "mysql主库地址"
+          job: "采集器名称"
+
+      - name: "MySQL SLAVE SQL线程停止"
+        description: "MySQL SLAVE SQL线程停止监控"
+        query: "mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_sql_running"
+        threshold: 0
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          master_host: "mysql主库地址"
+          job: "采集器名称"
+
+      - name: "MySQL慢查询监控"
+        description: "MySQL慢查询数量监控"
+        query: >-
+          increase(mysql_global_status_slow_queries[1m])
+        threshold: 150
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "服务名"
+
+      - name: "MySQL打开文件数监控"
+        description: "MySQL打开文件数监控"
+        query: >-
+          avg by (instance) (mysql_global_status_innodb_num_open_files) / avg by (instance)(mysql_global_variables_open_files_limit) * 100
+        threshold: 80
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          instance: "实例地址"
+
+      # - name: "MySQL长连接监控"
+      #   description: "MySQL长连接数监控-自定义监控建设中"
+      #   query: >-
+      #     mysql_long_running_queries{}
+      #   threshold: 20
+      #   threshold_type: "greater"
+      #   unit: ""
+      #   labels:
+      #     instance: "实例地址"
+      #     hostname: "主机名"
+      #     type: "服务类型"
+
+      - name: "MySQL InnoDB缓冲池命中率"
+        description: "MySQL InnoDB缓冲池命中率监控"
+        query: >-
+          (1 - mysql_global_status_innodb_buffer_pool_reads / mysql_global_status_innodb_buffer_pool_read_requests) * 100
+        threshold: 95
+        threshold_type: "less"
+        threshold_status: "critical"
+        unit: "%"
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+
+      - name: "MySQL临时表创建频繁"
+        description: "MySQL临时表创建频繁监控"
+        query: >-
+          rate(mysql_global_status_created_tmp_disk_tables[5m]) 
+        threshold: 100
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+
+      - name: "MySQL连接错误率"
+        description: "MySQL连接错误率监控"
+        query: >-
+          rate(mysql_global_status_connection_errors_total[2m])  
+        threshold: 10
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+
+      - name: "MySQL服务宕机"
+        description: "MySQL服务宕机监控"
+        query: "mysql_up"
+        threshold: 0
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+
+  - type: "L4-中间件层：Redis缓存服务监控"
+    metrics:
+      - name: "Redis服务状态"
+        description: "Redis实例运行状态监控"
+        query: 'redis_up{job!~".*sentinel.*"}'
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+
+      - name: "Redis连接数"
+        description: "Redis连接数使用率监控"
+        query: "(redis_connected_clients / redis_config_maxclients) * 100"
+        threshold: 80
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+
+      - name: "Redis内存使用"
+        description: "Redis内存使用率监控"
+        query: "redis_memory_used_bytes / redis_memory_max_bytes"
+        threshold: 0.8
+        threshold_type: "greater"
+        unit: "%"
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+
+      - name: "Redis内存碎片"
+        description: "Redis内存碎片率监控"
+        query: "redis_memory_used_rss_bytes/redis_memory_used_bytes"
+        threshold: 2.5
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+
+      - name: "Redis慢查询"
+        description: "Redis慢查询数量监控"
+        query: "rate(redis_slowlog_length[5m])"
+        threshold_type: "greater"
+        threshold: 50
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+
+      - name: "Redis主从延迟"
+        description: "Redis主从同步延迟监控"
+        query: "redis_connected_slave_lag_seconds"
+        threshold: 10
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+          slave_ip: "服务地址"
+          slave_port: "服务端口"
+
+      - name: "Redis主从切换"
+        description: "Redis主从角色切换监控"
+        query: 'changes(redis_instance_info{role="master"}[1m])'
+        threshold: 0
+        threshold_type: "greater"
+        threshold_status: "critical"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          service: "采集器命名"
+          redis_version: "redis版本号"
+
+  - type: "L4-中间件层：PostgreSQL数据库监控"
+    metrics:
+      - name: "PostgreSQL服务状态监控-建设中"
+        description: "PostgreSQL服务运行状态监控"
+        # query: "pg_up"
+        query: 'absent(up{job=~"pgsql"})'
+        threshold: 1
+        threshold_type: "equal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+
+      - name: "PostgreSQL连接数监控"
+        description: "PostgreSQL连接数负载监控"
+        query: "pg_stat_activity_count"
+        threshold: 1500
+        threshold_type: "greater_equal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+          server: "服务地址"
+          state: "state"
+
+      - name: "PostgreSQL主从延迟监控"
+        description: "PostgreSQL主从同步延迟监控"
+        query: "pg_replication_lag_seconds"
+        threshold: 60
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+          pod: "pod命名"
+
+
+      - name: "PostgreSQL长事务监控"
+        description: "PostgreSQL长事务数监控"
+        query: "pg_up"
+        threshold: 1
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+          server: "服务地址"
+          pod: "pod命名"
+          state: "state"
+
+
+      - name: "PostgreSQL死锁监控"
+        description: "PostgreSQL数据库死锁监控"
+        query: "rate(pg_stat_database_deadlocks[30m])"
+        threshold: 5
+        threshold_type: "greater"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          job: "采集器名称"
+          pod: "pod命名"
+
+
+##################
+
+  - type: "L5-接入层：API网关代理监控"
+    metrics:
+      # - name: "Kong网关内存监控"
+      #   description: "Kong网关共享内存使用监控--无需监控已经修复"
+      #   query: >-
+      #     max(kong_memory_lua_shared_dict_bytes{shared_dict="kong_process_events"}/kong_memory_lua_shared_dict_total_bytes{shared_dict="kong_process_events"}) by (shared_dict,pod,instance) * 100
+      #   threshold: 101
+      #   threshold_type: "greater_equal"
+      #   unit: ""
+      #   labels:
+      #     instance: "主机地址"
+      #     pod: "服务名称"
+      
+      - name: "接入层apirouter状态码监控"
+        description: "接入层apirouter 5xx状态码监控"
+        query: >-
+          sum(rate(kong_http_status{job="apirouter-exporter",code=~"5..", exported_service!~".*preview.*"}[10m])) by (exported_service) / sum(rate(kong_http_status{job="apirouter-exporter"}[10m])) by (exported_service)
+        threshold: 5
+        threshold_type: "greater_equal"
+        unit: ""
+        labels:
+          exported_service: "服务名称"
+
+      - name: "Routing路由状态监控"
+        description: "Routing服务健康状态监控"
+        query: >-
+          haproxy_up
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "主机地址"
           namespace: "命名空间"
-          persistentvolumeclaim: "PVC名称"
+          pod: "服务名称"
+    
+      - name: "接入层Routing后端服务5分钟内平均响应时间"
+        description: "接入层Routing后端服务5分钟内平均响应时间"
+        query: >-
+          avg_over_time(haproxy_server_http_response_time_average_seconds{backend !~"modtunnel|sreldap|databus-prod-17", namespace="marathon-prod"}[10m]) > 0.001
+        threshold: 10
+        threshold_type: "greater_equal"
+        unit: "s"
+        labels:
+          hostname: "主机地址"
+          namespace: "命名空间"
+          server: "服务名称" 
+          backend: "后端服务名称"
+
+      - name: "接入层5xx异常状态码监控"
+        description: "接入层状态码监控"
+        query: >-
+          (sum(rate(nginx_ingress_controller_requests{status=~"5..",namespace!~".*preview.*"}[10m])) by (ingress, exported_service)
+          /
+          sum(rate(nginx_ingress_controller_requests{namespace!~".*preview.*"}[10m])) by (ingress, exported_service)
+          ) * 100 >= 0
+        threshold: 5
+        #小于5%为正常，大于5%为异常
+        threshold_type: "greater_equal"
+        unit: ""
+        labels:
+          exported_service: "服务名称"
+          ingress: "ingress名称"
+
+      - name: "Web服务状态监控"
+        description: "Nginx Web服务状态监控-自定义监控建设中"
+        query: >-
+          network_port_status{process="nginx"}
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "主机地址"
+          src_host: "主机名"
+          process: "服务名称"
+          port: "80"
+
+      - name: "OpenAPI服务状态监控"
+        description: "OpenAPI接口服务状态监控-自定义监控建设中"
+        query: >-
+          openapi_status{target="prod",component="openapi"}
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+
+      - name: "LDAP服务状态监控"
+        description: "LDAP认证服务状态监控-自定义监控建设中"
+        query: >-
+          ldap_server_status{hostname=~"web1.*"}
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "实例地址"
+          hostname: "主机名"
+          component: "服务名"
+
+  - type: "L6-应用层：业务服务监控"
+    metrics:
+      - name: "文件上传服务监控"
+        description: "文件上传服务状态监控-建设中"
+        query: >-
+          itmp_coreapi_status
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "地址"
+          hostname: "主机名"
+          component: "服务名"
+          owner: "负责人"
+
+      - name: "CMDB服务状态监控"
+        description: "CMDB服务状态监控-自定义监控建设中"
+        query: >-
+          cmdb_status
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "地址"
+          hostname: "主机名"
+          component: "服务名"
+          owner: "负责人"
+
+      - name: "业务核心服务监控采集检查"
+        description: "核心服务监控覆盖检查"
+        query: >-
+          up{job=~".*eventlog.*|.*passport.*|.*ucenter.*",namespace!~".*preview.*|.*ingress.*"}
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "地址"
+          job: "服务对应exporter命名"
+          service: "服务名" 
+          namespace: "命名空间"
+
+  - type: "L7-采集层：监控数据采集状态"
+    metrics:
+      - name: "大数据服务监控数据采集状态监控-已排除"
+        description: "Exporter数据采集服务状态监控"
+        query: >-
+           up{job!~"hive.*|hadoop.*|hbase.*|spark.*|yarn.*|.*kafka.*"} 
+        threshold: 1
+        threshold_type: "equal"
+        threshold_status: "normal"
+        unit: ""
+        labels:
+          instance: "地址"
+          job: "服务对应exporter命名"
+          service: "服务名"

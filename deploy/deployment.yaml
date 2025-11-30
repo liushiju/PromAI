@@ -47,12 +47,12 @@ data:
         enabled: true
         smtp_host: "smtp.exmail.qq.com"  # 我这里用的是腾讯企业邮箱，需要改成自己的
         smtp_port: 465
-        username: "demo@demo.cn"  # 填写自己的邮箱账号
+        username: "kubehan@163.com"  # 填写自己的邮箱账号
         password: "xxxxxxxxxxxxxxxxxxxx"  # 这里填写的是授权码
-        from: "demo@demo.cn"
+        from: "kubehan@163.com"
         to:
           - "demo@demo.cn"
-        report_url: "https://promai.lichengjun.top"  # 这里可以填写ip+端口，也可以填写域名，如果是k8s里部署，推荐采用域名的方式，如果不行可以将 svc 以nodeport方式暴露出来，这里就可以使用ip+端口方式,如果是部署在k8s里，ingress 的需要自己去编写
+        report_url: "https://promai.kubehan.cn"  # 这里可以填写ip+端口，也可以填写域名，如果是k8s里部署，推荐采用域名的方式，如果不行可以将 svc 以nodeport方式暴露出来，这里就可以使用ip+端口方式,如果是部署在k8s里，ingress 的需要自己去编写
 
     metric_types:
       - type: "基础资源使用情况"

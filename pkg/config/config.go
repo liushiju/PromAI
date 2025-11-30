@@ -4,6 +4,7 @@ import "PromAI/pkg/notify"
 
 type Config struct {
 	PrometheusURL string       `yaml:"prometheus_url"`
+	DataSources   []DataSource `yaml:"data_sources"`
 	MetricTypes   []MetricType `yaml:"metric_types"`
 	ProjectName   string       `yaml:"project_name"`
 	CronSchedule  string       `yaml:"cron_schedule"`
@@ -13,10 +14,16 @@ type Config struct {
 		CronSchedule string `yaml:"cron_schedule"`
 	} `yaml:"report_cleanup"`
 	Notifications struct {
-		Dingtalk notify.DingtalkConfig `yaml:"dingtalk"`
-		Email    notify.EmailConfig    `yaml:"email"`
+		Dingtalk   notify.DingtalkConfig   `yaml:"dingtalk"`
+		Email      notify.EmailConfig      `yaml:"email"`
+		WeChatWork notify.WeChatWorkConfig `yaml:"wechat_work"`
 	} `yaml:"notifications"`
 	Port string `yaml:"port"`
+}
+
+type DataSource struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
 }
 
 type MetricType struct {
@@ -25,11 +32,12 @@ type MetricType struct {
 }
 
 type MetricConfig struct {
-	Name          string            `yaml:"name"`
-	Description   string            `yaml:"description"`
-	Query         string            `yaml:"query"`
-	Threshold     float64           `yaml:"threshold"`
-	Unit          string            `yaml:"unit"`
-	Labels        map[string]string `yaml:"labels"`
-	ThresholdType string            `yaml:"threshold_type"`
+	Name           string            `yaml:"name"`
+	Description    string            `yaml:"description"`
+	Query          string            `yaml:"query"`
+	Threshold      float64           `yaml:"threshold"`
+	Unit           string            `yaml:"unit"`
+	Labels         map[string]string `yaml:"labels"`
+	ThresholdType  string            `yaml:"threshold_type"`
+	ThresholdStatus string           `yaml:"threshold_status"`
 }

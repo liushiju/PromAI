@@ -1,0 +1,234 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promai
+  namespace: promai
+  labels:
+    app: promai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: promai
+  template:
+    metadata:
+      labels:
+        app: promai
+    spec:
+      containers:
+      - name: promai
+        image: promai:latest  # 需要替换为实际的镜像
+        ports:
+        - containerPort: 8091
+          name: http
+        env:
+        - name: PROMETHEUS_URL
+          value: "http://prometheus.kubehan.cn"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /api/promai/status
+            port: 8091
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/promai/status
+            port: 8091
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: promai-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promai-config
+  namespace: promai
+data:
+  config.yaml: |
+    prometheus_url: "http://prometheus.k8s.bruneihealth.kubehan.cn"
+    
+    # 多数据源配置
+    data_sources:
+      - name: "bruneihealth"
+        url: "http://prometheus.k8s.bruneihealth.kubehan.cn"
+      - name: "cluster2" 
+        url: "http://prometheus.cluster2.example.com"
+      - name: "test-cluster"
+        url: "http://prometheus.test.example.com"
+    
+    project_name: "测试项目巡检报告"
+    
+    # 定时任务：每天9点半和17半执行
+    cron_schedule: "03 10,17 * * *"
+    
+    # 报告清理
+    report_cleanup:
+      enabled: true
+      max_age: 7
+      cron_schedule: "0 0 * * *"
+    
+    # 通知配置
+    notifications:
+      dingtalk:
+        enabled: false
+        webhook: ""
+        secret: ""
+        report_url: ""
+      email:
+        enabled: false
+        smtp_host: ""
+        smtp_port: 465
+        username: ""
+        password: ""
+        from: ""
+        to: []
+        report_url: ""
+      wechat_work:
+        enabled: true
+        webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=0c4ef257-a6f0-430c-b454-d2b82bbd6e53"
+        proxy_url: ""
+        report_url: "http://localhost:8091"
+    
+    metric_types:
+      - type: "基础资源使用情况"
+        metrics:
+          - name: "CPU使用率"
+            description: "节点CPU使用率统计"
+            query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+            threshold: 80
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+          
+          - name: "内存使用率"
+            description: "节点内存使用率统计"
+            query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
+            threshold: 85
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+          
+          - name: "磁盘使用率"
+            description: "节点磁盘使用率统计"
+            query: >-
+              (((100 -((node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes))
+              and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint!~"/run.*|/var.*|/boot.*|/tmp.*"}== 0)
+              + on(instance) group_left(node_uname_info) node_uname_info)
+              * on(instance) group_left(nodename) node_uname_info
+            threshold: 80
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+              mountpoint: "挂载点"
+              device: "磁盘"
+              nodename: "节点名称"
+      
+      - type: "kubernetes集群监控状态"
+        metrics:
+          - name: "K8s集群巡检"
+            description: "K8s集群巡检"
+            query: "k8s_cluster_auto_check"
+            threshold: 1
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              component: "服务名称"
+              hostname: "主机名称"
+              owner: "负责人"
+          
+          - name: "自定义监控脚本执行情况"
+            description: "script-exporter监控脚本执行情况"
+            query: "script_success"
+            threshold: 1
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              instance: "宿主机器"
+              script: "脚本名称"
+          
+          - name: "Pod运行状态"
+            description: "集群Pod运行状态统计"
+            query: "sum by (namespace, pod) (kube_pod_status_phase{phase='Running',namespace='kube-system'})"
+            threshold: 1
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              namespace: "命名空间"
+              pod: "Pod名称"
+          
+          - name: "节点就绪状态"
+            description: "K8s节点就绪状态检查"
+            query: "kube_node_status_condition{condition='Ready',status!='true'}"
+            threshold: 0
+            threshold_type: "equal"
+            unit: ""
+            labels:
+              node: "节点"
+              condition: "状态类型"
+          
+          - name: "PVC使用率"
+            description: "持久化存储使用率"
+            query: >-
+              100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
+            threshold: 90
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              namespace: "命名空间"
+              persistentvolumeclaim: "PVC名称"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: promai-service
+  namespace: promai
+spec:
+  selector:
+    app: promai
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8091
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: promai-ingress
+  namespace: promai
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod  # 如果需要HTTPS
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: promai.example.com  # 替换为你的域名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: promai-service
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - promai.example.com
+    secretName: promai-tls  # 如果需要HTTPS

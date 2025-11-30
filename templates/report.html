@@ -58,6 +58,18 @@
             color: #ffc107;
         }
 
+        .datasource-info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .datasource-info strong {
+            color: #1976d2;
+        }
+
         /* 表格样式 */
         table {
             width: 100%;
@@ -150,6 +162,189 @@
                 white-space: nowrap;
             }
         }
+
+        /* 添加展开/收起按钮样式 */
+        .section-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 15px;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .toggle-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: #45a049;
+        }
+
+        .section-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .section-content.collapsed {
+            display: none;
+        }
+
+        /* 添加筛选按钮组样式 */
+        .filter-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            position: relative;
+            padding: 8px 16px;
+            border: 2px solid #4CAF50;
+            background-color: white;
+            color: #4CAF50;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            min-width: 80px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* 全部按钮样式 */
+        .filter-btn[data-status="all"] {
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+
+        .filter-btn[data-status="all"]:hover,
+        .filter-btn[data-status="all"].active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* 正常状态按钮样式 */
+        .filter-btn.normal {
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .filter-btn.normal:hover,
+        .filter-btn.normal.active {
+            background-color: #28a745;
+            color: white;
+        }
+
+        /* 警告状态按钮样式 */
+        .filter-btn.warning {
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .filter-btn.warning:hover,
+        .filter-btn.warning.active {
+            background-color: #ffc107;
+            color: #856404;
+            border-color: #ffc107;
+        }
+
+        /* 严重状态按钮样式 */
+        .filter-btn.critical {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .filter-btn.critical:hover,
+        .filter-btn.critical.active {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        /* 优化计数器样式 */
+        .status-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        /* 默认计数器样式 */
+        .filter-btn .status-count {
+            background-color: #f8f9fa;
+            color: inherit;
+        }
+
+        /* 全部按钮计数器样式 */
+        .filter-btn[data-status="all"] .status-count {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: inherit;
+        }
+
+        .filter-btn[data-status="all"].active .status-count {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: inherit;
+        }
+
+        /* 正常状态计数器样式 */
+        .filter-btn.normal .status-count {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: inherit;
+        }
+
+        .filter-btn.normal.active .status-count {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: inherit;
+        }
+
+        /* 警告状态计数器样式 */
+        .filter-btn.warning .status-count {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: inherit;
+        }
+
+        .filter-btn.warning.active .status-count {
+            background-color: rgba(133, 100, 4, 0.1);
+            color: inherit;
+        }
+
+        /* 严重状态计数器样式 */
+        .filter-btn.critical .status-count {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: inherit;
+        }
+
+        .filter-btn.critical.active .status-count {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: inherit;
+        }
+
+        /* 隐藏被筛选的行 */
+        tr.filtered {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -157,9 +352,27 @@
         <!--<h1>集群系统监控巡检报告</h1>-->
         <h1 style="text-align: center">{{.Project}}</h1>
         <p>生成时间: {{.Timestamp.Format "2006-01-02 15:04:05"}}</p>
+        <div class="datasource-info">
+            <strong>数据源:</strong> {{.Datasource}}
+        </div>
+
+        <!-- 添加筛选按钮组 -->
+        <div class="filter-group">
+            <span style="font-weight: bold;">状态筛选：</span>
+            <button class="filter-btn active" data-status="all">全部</button>
+            <button class="filter-btn normal" data-status="normal">正常</button>
+            <button class="filter-btn warning" data-status="warning">警告</button>
+            <button class="filter-btn critical" data-status="critical">严重</button>
+        </div>
 
         <!-- 概览卡片 -->
-        <div class="summary-cards">
+        <div class="section">
+            <div class="section-header">
+                <h2>概览统计</h2>
+                <button class="toggle-btn" onclick="toggleSection(this)">收起</button>
+            </div>
+            <div class="section-content">
+                <div class="summary-cards">
             {{range $type, $group := .MetricGroups}}
             <div class="card {{$type}}">
                 <h3>{{$type}}</h3>
@@ -192,64 +405,76 @@
                 </div>
             </div>
             {{end}}
+                </div>
+            </div>
         </div>
 
         <!-- 图表部分 -->
         <div class="section">
-            <h2>资源使用概览</h2>
-            <div class="chart-container">
-                <canvas id="resourceChart"></canvas>
+            <div class="section-header">
+                <h2>资源使用概览</h2>
+                <button class="toggle-btn" onclick="toggleSection(this)">收起</button>
+            </div>
+            <div class="section-content">
+                <div class="chart-container">
+                    <canvas id="resourceChart"></canvas>
+                </div>
             </div>
         </div>
 
         <!-- 详细指标表格 -->
         {{range $type, $group := .MetricGroups}}
         <div class="section">
-            <h2>{{$type}} 监控指标</h2>
-            {{range $metricName, $metrics := $group.MetricsByName}}
-            <h3><li>{{$metricName}}</li></h3>
-	    {{if eq (len $metrics) 0 }}
-             <p>未查询到数据</p>
-            {{end}}
-            {{if gt (len $metrics) 0}}
-            <table>
-                <tr>
-                    <th>指标名称</th>
-                    {{$headerLabels := (index $metrics 0).Labels}}
-                    {{range $headerLabels}}
-                        <th data-label-name="{{.Name}}">{{.Alias}}</th>
-                    {{end}}
-                    <th>值</th>
-                    <th>状态</th>
-                    <th>检测时间</th>
-                </tr>
-                {{range $metric := $metrics}}
-                <tr class="{{.Status}}">
-                    <td>{{.Name}}</td>
-                    {{range $headerLabels}}
-                        {{$labelName := .Name}}
-                        {{range $metricLabel := $metric.Labels}}
-                            {{if eq $metricLabel.Name $labelName}}
-                                <td data-label-name="{{$labelName}}">
-                                    <span class="label-value">{{$metricLabel.Value}}</span>
-                                </td>
+            <div class="section-header">
+                <h2>{{$type}} 监控指标</h2>
+                <button class="toggle-btn" onclick="toggleSection(this)">收起</button>
+            </div>
+            <div class="section-content">
+                {{range $metricName, $metrics := $group.MetricsByName}}
+                <h3><li>{{$metricName}}</li></h3>
+                {{if eq (len $metrics) 0 }}
+                <p>未查询到数据</p>
+                {{end}}
+                {{if gt (len $metrics) 0}}
+                <table>
+                    <tr>
+                        <th>指标名称</th>
+                        {{$headerLabels := (index $metrics 0).Labels}}
+                        {{range $headerLabels}}
+                            <th data-label-name="{{.Name}}">{{.Alias}}</th>
+                        {{end}}
+                        <th>值</th>
+                        <th>状态</th>
+                        <th>检测时间</th>
+                    </tr>
+                    {{range $metric := $metrics}}
+                    <tr class="{{.Status}}">
+                        <td>{{.Name}}</td>
+                        {{range $headerLabels}}
+                            {{$labelName := .Name}}
+                            {{range $metricLabel := $metric.Labels}}
+                                {{if eq $metricLabel.Name $labelName}}
+                                    <td data-label-name="{{$labelName}}">
+                                        <span class="label-value">{{$metricLabel.Value}}</span>
+                                    </td>
+                                {{end}}
                             {{end}}
                         {{end}}
+                        <td>{{printf "%.2f" $metric.Value}}{{$metric.Unit}}</td>
+                        <td>
+                            {{if eq .Status "normal"}}正常
+                            {{else if eq .Status "warning"}}警告
+                            {{else if eq .Status "critical"}}严重
+                            {{else}}{{.Status}}
+                            {{end}}
+                        </td>
+                        <td>{{.Timestamp.Format "2006-01-02 15:04:05"}}</td>
+                    </tr>
                     {{end}}
-                    <td>{{printf "%.2f" $metric.Value}}{{$metric.Unit}}</td>
-                    <td>
-                        {{if eq .Status "normal"}}正常
-                        {{else if eq .Status "warning"}}警告
-                        {{else if eq .Status "critical"}}严重
-                        {{else}}{{.Status}}
-                        {{end}}
-                    </td>
-                    <td>{{.Timestamp.Format "2006-01-02 15:04:05"}}</td>
-                </tr>
+                </table>
                 {{end}}
-            </table>
-            {{end}}
-            {{end}}
+                {{end}}
+            </div>
         </div>
         {{end}}
     </div>
@@ -291,63 +516,144 @@
     const labels = []; 
     const datasets = [];
 
-    // 添加通用的数据获取函数
-    function getMetricValues(metricName, filterFn = null) {
-        const values = [];
-        const labels = new Set(); // 使用 Set 存储唯一的标签
-        
+    // 获取CPU和内存数据（按主机）
+    function getHostMetricValues(metricName) {
+        const hostValues = new Map(); // 主机名 -> 值
+
         for (const [type, group] of Object.entries(data)) {
             if (group.MetricsByName && group.MetricsByName[metricName]) {
                 for (const metric of group.MetricsByName[metricName]) {
-                    if (filterFn && !filterFn(metric)) continue;
-                    
-                    // 获取实例标签
-                    const instanceLabel = metric.Labels.find(label => 
-                        label.Name === "instance" || label.Name === "node"
+                    const hostLabel = metric.Labels.find(label =>
+                        label.Name === "nodename" || label.Name === "instance"
                     );
-                    if (instanceLabel) {
-                        labels.add(instanceLabel.Value.split(':')[0]);
-                        values.push(parseFloat(metric.Value));
+                    if (hostLabel) {
+                        const hostName = hostLabel.Value.split(':')[0];
+                        hostValues.set(hostName, parseFloat(metric.Value));
                     }
                 }
             }
         }
-        return { values, labels: Array.from(labels) };
+        return { values: Array.from(hostValues.values()), labels: Array.from(hostValues.keys()) };
+    }
+
+    // 获取磁盘数据（按主机和磁盘分区）
+    function getDiskMetricValues(filterMountpoints = null) {
+        const diskData = [];
+
+        for (const [type, group] of Object.entries(data)) {
+            if (group.MetricsByName && group.MetricsByName['存储设备状态监控']) {
+                for (const metric of group.MetricsByName['存储设备状态监控']) {
+                    const hostLabel = metric.Labels.find(label => label.Name === "instance" );
+                    const mountLabel = metric.Labels.find(label => label.Name === "mountpoint");
+
+                    if (hostLabel && mountLabel) {
+                        const mountpoint = mountLabel.Value;
+
+                        // 如果指定了筛选条件，只包含匹配的挂载点
+                        if (filterMountpoints) {
+                            if (Array.isArray(filterMountpoints)) {
+                                if (!filterMountpoints.includes(mountpoint)) continue;
+                            } else if (typeof filterMountpoints === 'string') {
+                                if (!mountpoint.includes(filterMountpoints)) continue;
+                            }
+                        }
+
+                        diskData.push({
+                            host: hostLabel.Value.split(':')[0],
+                            mountpoint: mountLabel.Value,
+                            value: parseFloat(metric.Value),
+                            // label: `${hostLabel.Value.split(':')[0]} (${mountLabel.Value})`
+                            // 只显示主机名，不显示挂载点
+                             label: `${hostLabel.Value.split(':')[0]}`
+                        });
+                    }
+                }
+            }
+        }
+        return diskData;
     }
 
     // 获取各项指标数据
-    const cpuData = getMetricValues('CPU使用率');
-    const memoryData = getMetricValues('内存使用率');
-    const diskData = getMetricValues('磁盘使用率', (metric) => {
-        return metric.Labels.some(label => 
-            label.Value === "rootfs" || label.Value === "/"
-        );
+    const cpuData = getHostMetricValues('CPU性能状态监控');
+    const memoryData = getHostMetricValues('内存性能状态监控');
+    // 获取磁盘数据，只包含/home 挂载点
+    const diskData = getDiskMetricValues('/home');
+
+    // 创建图表标签（合并主机和磁盘标签）
+    const allLabels = new Set([
+        ...cpuData.labels,
+        ...memoryData.labels,
+        ...diskData.map(d => d.label)
+    ]);
+    const chartLabels = Array.from(allLabels);
+    // 添加颜色判断函数 - 为不同指标使用不同颜色方案
+    function getColorByValue(value, metricType) {
+        if (metricType === 'cpu') {
+            // CPU使用率 - 蓝色系
+            if (value >= 95) return '#ff0000';  // 深蓝
+            if (value >= 80) return '#ffc107';  // 中蓝
+            return '#4CAF50';                   // 浅蓝
+        } else if (metricType === 'memory') {
+            // 内存使用率 - 紫色系
+            if (value >= 95) return '#ff0000';  // 深紫
+            if (value >= 80) return '#ffc107';  // 中紫
+            return '#4CAF50';                   // 浅紫
+        } else {
+            // 磁盘使用率 - 绿色系（保持原色）
+            if (value >= 95) return '#ff0000';  // 红色告警
+            if (value >= 80) return '#ffc107';  // 黄色告警
+            return '#4CAF50';                   // 绿色正常
+        }
+    }
+    // 创建数据集 - CPU和内存数据需要匹配新的标签结构
+    function alignDataWithLabels(originalData, originalLabels, allLabels) {
+        const labelToValue = new Map();
+        originalLabels.forEach((label, index) => {
+            labelToValue.set(label, originalData[index]);
+        });
+
+        return allLabels.map(label => {
+            // 对于磁盘标签，尝试匹配主机名
+            if (label.includes('(')) {
+                const hostName = label.split(' ')[0];
+                return labelToValue.get(hostName) || null;
+            }
+            return labelToValue.get(label) || null;
+        });
+    }
+
+    // 对齐CPU和内存数据
+    const alignedCpuData = alignDataWithLabels(cpuData.values, cpuData.labels, chartLabels);
+    const alignedMemoryData = alignDataWithLabels(memoryData.values, memoryData.labels, chartLabels);
+
+    // 对齐磁盘数据
+    const diskValues = chartLabels.map(label => {
+        const disk = diskData.find(d => d.label === label);
+        return disk ? disk.value : null;
     });
 
-    // 使用第一个指标的标签作为图表标签
-    const chartLabels = cpuData.labels;
-    // 添加颜色判断函数
-    function getColorByValue(value) {
-        if (value >= 90) return '#dc3545';  // 红色告警 (>=90%)
-        if (value >= 80) return '#ffc107';  // 黄色告警 (80-90%)
-        return '#4CAF50';                   // 绿色正常 (<80%)
-    }
     // 创建数据集
     const chartDatasets = [
         {
-            label: 'CPU使用率',
-            data: cpuData.values,
-            backgroundColor: cpuData.values.map(value => getColorByValue(value)),
+            label: 'CPU性能使用率',
+            data: alignedCpuData,
+            backgroundColor: alignedCpuData.map(value => value ? getColorByValue(value, 'cpu') : '#e3f2fd'),
+            borderColor: '#1976d2',
+            borderWidth: 1
         },
         {
-            label: '内存使用率',
-            data: memoryData.values,
-            backgroundColor: memoryData.values.map(value => getColorByValue(value)),
+            label: '内存性能使用率',
+            data: alignedMemoryData,
+            backgroundColor: alignedMemoryData.map(value => value ? getColorByValue(value, 'memory') : '#f3e5f5'),
+            borderColor: '#9999ff',
+            borderWidth: 1
         },
         {
-            label: '磁盘使用率',
-            data: diskData.values,
-            backgroundColor: diskData.values.map(value => getColorByValue(value)),
+            label: '/home存储设备使用率',
+            data: diskValues,
+            backgroundColor: diskValues.map(value => value ? getColorByValue(value, 'disk') : '#e8f5e9'),
+            borderColor: '#4CAF50',
+            borderWidth: 1
         }
     ];
 
@@ -381,6 +687,125 @@
                 }
             }
         }
+    });
+
+    // 添加展开/收起功能
+    function toggleSection(button) {
+        const section = button.closest('.section');
+        const content = section.querySelector('.section-content');
+        const isCollapsed = content.classList.toggle('collapsed');
+        button.textContent = isCollapsed ? '展开' : '收起';
+    }
+
+    // 添加全局展开/收起按钮
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.querySelector('.container');
+        const globalToggleBtn = document.createElement('button');
+        globalToggleBtn.className = 'toggle-btn';
+        globalToggleBtn.style.margin = '10px 0';
+        globalToggleBtn.textContent = '全部收起';
+        globalToggleBtn.onclick = function() {
+            const allSections = document.querySelectorAll('.section-content');
+            const allButtons = document.querySelectorAll('.toggle-btn');
+            const isAnyExpanded = Array.from(allSections).some(section => !section.classList.contains('collapsed'));
+            
+            allSections.forEach(section => {
+                section.classList.toggle('collapsed', isAnyExpanded);
+            });
+            allButtons.forEach(btn => {
+                btn.textContent = isAnyExpanded ? '展开' : '收起';
+            });
+            globalToggleBtn.textContent = isAnyExpanded ? '全部展开' : '全部收起';
+        };
+        
+        // 将全局按钮插入到时间戳之后
+        const timestamp = container.querySelector('p');
+        timestamp.after(globalToggleBtn);
+    });
+
+    // 添加筛选功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const rows = document.querySelectorAll('table tr:not(:first-child)');
+        
+        // 更新状态计数
+        function updateStatusCounts() {
+            const counts = {
+                normal: 0,
+                warning: 0,
+                critical: 0
+            };
+            
+            rows.forEach(row => {
+                if (!row.classList.contains('filtered')) {
+                    if (row.classList.contains('normal')) counts.normal++;
+                    if (row.classList.contains('warning')) counts.warning++;
+                    if (row.classList.contains('critical')) counts.critical++;
+                }
+            });
+            
+            // 更新按钮上的计数
+            filterButtons.forEach(btn => {
+                const status = btn.dataset.status;
+                if (status !== 'all') {
+                    const count = counts[status] || 0;
+                    const countSpan = btn.querySelector('.status-count') || document.createElement('span');
+                    countSpan.className = 'status-count';
+                    countSpan.textContent = count;
+                    if (!btn.querySelector('.status-count')) {
+                        btn.appendChild(countSpan);
+                    }
+                }
+            });
+        }
+
+        // 初始化状态计数
+        updateStatusCounts();
+
+        // 筛选功能
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // 更新按钮状态
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const status = button.dataset.status;
+                
+                // 筛选表格行
+                rows.forEach(row => {
+                    if (status === 'all') {
+                        row.classList.remove('filtered');
+                    } else {
+                        row.classList.toggle('filtered', !row.classList.contains(status));
+                    }
+                });
+
+                // 更新计数
+                updateStatusCounts();
+
+                // 如果所有行都被筛选掉了，显示一个提示
+                const sections = document.querySelectorAll('.section');
+                sections.forEach(section => {
+                    const table = section.querySelector('table');
+                    if (table) {
+                        const visibleRows = table.querySelectorAll('tr:not(.filtered):not(:first-child)');
+                        const noDataMsg = section.querySelector('.no-data-message') || document.createElement('p');
+                        noDataMsg.className = 'no-data-message';
+                        noDataMsg.style.textAlign = 'center';
+                        noDataMsg.style.color = '#666';
+                        
+                        if (visibleRows.length === 0) {
+                            noDataMsg.textContent = '没有符合条件的数据';
+                            if (!section.querySelector('.no-data-message')) {
+                                table.after(noDataMsg);
+                            }
+                        } else {
+                            noDataMsg.remove();
+                        }
+                    }
+                });
+            });
+        });
     });
 </script>
 </body>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史报告 - PromAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            font-weight: 300;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-5px);
+        }
+
+        main {
+            padding: 40px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 25px;
+            padding: 10px 20px;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            border: none;
+            background: none;
+            outline: none;
+            flex-grow: 1;
+            margin-left: 10px;
+            font-size: 1em;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 1px solid #e9ecef;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .report-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .report-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .report-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-icon {
+            font-size: 1.5em;
+        }
+
+        .report-meta {
+            margin-bottom: 20px;
+        }
+
+        .meta-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .meta-label {
+            color: #6c757d;
+        }
+
+        .meta-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .report-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            flex-grow: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-download {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .btn-download:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-delete {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .btn-delete:hover {
+            background: #f5c6cb;
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 5em;
+            margin-bottom: 30px;
+            opacity: 0.3;
+        }
+
+        .empty-state h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .empty-state p {
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        .create-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .create-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: none;
+            }
+
+            .report-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>历史报告</h1>
+            <a href="/api/promai/" class="back-btn">← 返回首页</a>
+        </header>
+
+        <main>
+            <div class="toolbar">
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" placeholder="搜索报告..." id="searchInput" onkeyup="filterReports()">
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterReports('all')">全部</button>
+                    <button class="filter-btn" onclick="filterReports('today')">今天</button>
+                    <button class="filter-btn" onclick="filterReports('week')">本周</button>
+                    <button class="filter-btn" onclick="filterReports('month')">本月</button>
+                </div>
+            </div>
+
+            <div id="loadingState" class="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 20px; color: #6c757d;">正在加载报告...</p>
+            </div>
+
+            <div id="reportGrid" class="report-grid">
+                <!-- 报告卡片将通过JavaScript动态加载 -->
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📄</div>
+                <h2>暂无历史报告</h2>
+                <p>还没有生成任何巡检报告</p>
+                <button class="create-btn" onclick="window.location.href='/'">
+                    <span>🚀</span>
+                    <span>创建第一个报告</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 模拟报告数据（实际应该从后端API获取）
+        let reports = [
+            {
+                id: 'report_20250926_103846',
+                title: '系统巡检报告',
+                time: '2025-09-26 10:38:46',
+                size: '2.3 MB',
+                duration: '2分15秒',
+                datasource: '生产环境',
+                stats: {
+                    total: 156,
+                    alerts: 3,
+                    critical: 0,
+                    warning: 3
+                },
+                status: 'warning',
+                url: '/api/promai/reports/inspection_report_20250926_103846.html'
+            },
+            {
+                id: 'report_20250926_101258',
+                title: '系统巡检报告',
+                time: '2025-09-26 10:12:58',
+                size: '2.1 MB',
+                duration: '1分58秒',
+                datasource: '开发环境',
+                stats: {
+                    total: 142,
+                    alerts: 1,
+                    critical: 0,
+                    warning: 1
+                },
+                status: 'success',
+                url: '/api/promai/reports/inspection_report_20250926_101258.html'
+            }
+        ];
+
+        // 加载报告列表
+        function loadReports() {
+            const reportGrid = document.getElementById('reportGrid');
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+
+            // 显示加载状态
+            reportGrid.style.display = 'none';
+            emptyState.style.display = 'none';
+            loadingState.style.display = 'block';
+
+            // 模拟异步加载
+            setTimeout(() => {
+                loadingState.style.display = 'none';
+
+                if (reports.length === 0) {
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                reportGrid.style.display = 'grid';
+                emptyState.style.display = 'none';
+
+                // 清空现有内容
+                reportGrid.innerHTML = '';
+
+                // 渲染每个报告
+                reports.forEach(report => {
+                    const reportCard = createReportCard(report);
+                    reportGrid.appendChild(reportCard);
+                });
+            }, 1000);
+        }
+
+        // 创建报告卡片
+        function createReportCard(report) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+
+            const statusClass = `status-${report.status}`;
+            const statusText = {
+                'success': '正常',
+                'warning': '警告',
+                'danger': '严重'
+            }[report.status];
+
+            card.innerHTML = `
+                <div class="status-badge ${statusClass}">${statusText}</div>
+
+                <div class="report-title">
+                    <span class="report-icon">📊</span>
+                    <span>${report.title}</span>
+                </div>
+
+                <div class="report-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">生成时间</span>
+                        <span class="meta-value">${report.time}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">数据源</span>
+                        <span class="meta-value">${report.datasource}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">执行耗时</span>
+                        <span class="meta-value">${report.duration}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">文件大小</span>
+                        <span class="meta-value">${report.size}</span>
+                    </div>
+                </div>
+
+                <div class="report-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${report.stats.total}</div>
+                        <div class="stat-label">总指标</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${report.stats.alerts}</div>
+                        <div class="stat-label">告警数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #dc3545;">${report.stats.critical}</div>
+                        <div class="stat-label">严重</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #ffc107;">${report.stats.warning}</div>
+                        <div class="stat-label">警告</div>
+                    </div>
+                </div>
+
+                <div class="report-actions">
+                    <a href="${report.url}" target="_blank" class="action-btn btn-view">查看</a>
+                    <a href="${report.url}" download class="action-btn btn-download">下载</a>
+                    <button class="action-btn btn-delete" onclick="deleteReport('${report.id}')">删除</button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // 筛选报告
+        function filterReports(period) {
+            // 更新按钮状态
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // TODO: 实现实际的筛选逻辑
+            console.log('Filtering reports by:', period);
+        }
+
+        // 搜索报告
+        function filterReports() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.report-card');
+
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // 删除报告
+        function deleteReport(reportId) {
+            if (confirm('确定要删除这个报告吗？')) {
+                // 从数组中移除
+                reports = reports.filter(r => r.id !== reportId);
+
+                // 重新加载
+                loadReports();
+
+                // TODO: 调用后端API删除文件
+                console.log('Deleting report:', reportId);
+            }
+        }
+
+        // 从后端获取报告列表
+        function fetchReportsFromBackend() {
+            fetch('/api/promai/reports/list')
+                .then(response => response.json())
+                .then(data => {
+                    reports = data;
+                    loadReports();
+                })
+                .catch(error => {
+                    console.error('Failed to fetch reports:', error);
+                    // 加载失败时显示模拟数据
+                    loadReports();
+                });
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            loadReports();
+            fetchReportsFromBackend();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巡检进度 - PromAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            font-weight: 300;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-5px);
+        }
+
+        main {
+            padding: 40px;
+        }
+
+        .task-list {
+            margin-top: 30px;
+        }
+
+        .task-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .task-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .task-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-completed {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .task-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .info-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.3),
+                    transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .task-log {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-time {
+            color: #6c757d;
+            margin-right: 10px;
+        }
+
+        .log-info {
+            color: #17a2b8;
+        }
+
+        .log-success {
+            color: #28a745;
+        }
+
+        .log-error {
+            color: #dc3545;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .task-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>巡检进度</h1>
+            <a href="/api/promai/" class="back-btn">← 返回首页</a>
+        </header>
+
+        <main>
+            <div id="loadingState" class="loading" style="display: flex;">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 20px; color: #6c757d;">正在加载任务数据...</p>
+            </div>
+
+            <div id="taskList" class="task-list" style="display: none;">
+                <!-- 任务列表将通过JavaScript动态加载 -->
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📊</div>
+                <h2>暂无运行中的巡检任务</h2>
+                <p>点击"开始巡检"按钮来创建新的巡检任务</p>
+            </div>
+        </main>
+    </div>
+
+    <button class="refresh-btn" onclick="fetchTasksFromBackend()" title="刷新">🔄</button>
+
+    <script>
+        let tasks = [];
+
+        // 加载任务列表
+        function loadTasks() {
+            const taskList = document.getElementById('taskList');
+            const emptyState = document.getElementById('emptyState');
+
+            // 清空现有内容
+            taskList.innerHTML = '';
+
+            if (tasks.length === 0) {
+                taskList.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            taskList.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            // 渲染每个任务
+            tasks.forEach(task => {
+                const taskCard = createTaskCard(task);
+                taskList.appendChild(taskCard);
+            });
+        }
+
+        // 创建任务卡片
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+
+            const statusClass = `status-${task.status}`;
+            const statusText = {
+                'running': '执行中',
+                'completed': '已完成',
+                'failed': '失败',
+                'pending': '等待中'
+            }[task.status];
+
+            card.innerHTML = `
+                <div class="task-header">
+                    <div class="task-title">${task.name || '未知任务'}</div>
+                    <div class="task-status ${statusClass}">${statusText}</div>
+                </div>
+
+                <div class="task-info">
+                    <div class="info-item">
+                        <span class="info-label">数据源</span>
+                        <span class="info-value">${task.datasource || '未知'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">开始时间</span>
+                        <span class="info-value">${task.startTime ? new Date(task.startTime).toLocaleString('zh-CN') : '未知'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">已用时间</span>
+                        <span class="info-value">${task.startTime ? getElapsedTime(new Date(task.startTime), task.endTime, task.status) : '未知'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">进度</span>
+                        <span class="info-value">${task.progress || 0}%</span>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${task.progress || 0}%"></div>
+                </div>
+
+                <div class="task-steps" style="margin-bottom: 15px;">
+                    ${(task.steps || []).map(step => `
+                        <span style="display: inline-block; margin-right: 15px; font-size: 0.9em;">
+                            ${step.status === 'completed' ? '✅' : step.status === 'running' ? '⏳' : '⏸️'} ${step.name}
+                        </span>
+                    `).join('')}
+                </div>
+
+                <div class="task-log">
+                    ${(task.logs || []).map(log => `
+                        <div class="log-line">
+                            <span class="log-time">[${new Date(log.time).toLocaleTimeString('zh-CN')}]</span>
+                            <span class="log-${log.type}">${log.message}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            return card;
+        }
+
+        // 计算经过的时间
+        function getElapsedTime(startTime, endTime, status) {
+            // 调试信息
+            console.log('getElapsedTime参数:', {
+                startTime: startTime,
+                endTime: endTime,
+                status: status,
+                startTimeType: typeof startTime,
+                endTimeType: typeof endTime
+            });
+
+            let endTimeToUse = endTime;
+
+            // 如果任务仍在运行中，使用当前时间作为结束时间
+            if (status === 'running') {
+                endTimeToUse = new Date();
+            }
+
+            // 确保有有效的开始时间和结束时间
+            if (!startTime || !endTimeToUse) {
+                console.log('缺少开始时间或结束时间');
+                return '未知';
+            }
+
+            // 确保是Date对象
+            if (!(startTime instanceof Date)) {
+                startTime = new Date(startTime);
+                console.log('转换startTime为Date对象:', startTime);
+            }
+
+            if (!(endTimeToUse instanceof Date) && endTimeToUse) {
+                endTimeToUse = new Date(endTimeToUse);
+                console.log('转换endTime为Date对象:', endTimeToUse);
+            }
+
+            const diff = endTimeToUse.getTime() - startTime.getTime();
+
+            console.log('时间差计算:', {
+                startTimeMs: startTime.getTime(),
+                endTimeMs: endTimeToUse.getTime(),
+                diff: diff,
+                diffFormatted: formatDuration(diff)
+            });
+
+            // 如果时间差为负数或异常，返回未知
+            if (diff < 0) {
+                console.log('时间差为负数，使用当前时间');
+                endTimeToUse = new Date();
+                const correctedDiff = endTimeToUse.getTime() - startTime.getTime();
+                return formatDurationWithStatus(correctedDiff, status);
+            }
+
+            return formatDurationWithStatus(diff, status);
+        }
+
+        // 格式化持续时间
+        function formatDuration(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            return `${minutes}分${seconds}秒`;
+        }
+
+        // 格式化持续时间并添加状态
+        function formatDurationWithStatus(diff, status) {
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            const duration = `${minutes}分${seconds}秒`;
+
+            // 处理时间差极小的情况（比如小于1秒）
+            if (diff < 1000) {
+                if (status === 'completed') {
+                    return `已完成 (小于1秒)`;
+                } else if (status === 'failed') {
+                    return `失败 (小于1秒)`;
+                } else {
+                    return '小于1秒';
+                }
+            }
+
+            // 如果已完成，显示完成状态
+            if (status === 'completed') {
+                return `已完成 (${duration})`;
+            } else if (status === 'failed') {
+                return `失败 (${duration})`;
+            } else {
+                return duration;
+            }
+        }
+
+        // 模拟进度更新
+        function simulateProgress() {
+            tasks.forEach(task => {
+                if (task.status === 'running' && task.progress < 100) {
+                    task.progress += Math.random() * 5;
+                    if (task.progress >= 100) {
+                        task.progress = 100;
+                        task.status = 'completed';
+                        task.log.push({
+                            time: new Date().toLocaleTimeString('zh-CN'),
+                            message: '巡检任务完成！',
+                            type: 'success'
+                        });
+                    }
+                }
+            });
+            loadTasks();
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            // 从后端获取实际的任务数据
+            fetchTasksFromBackend();
+        });
+
+        // 从后端获取任务数据
+        function fetchTasksFromBackend() {
+            const loadingState = document.getElementById('loadingState');
+            const taskList = document.getElementById('taskList');
+            const emptyState = document.getElementById('emptyState');
+
+            // 显示加载状态
+            loadingState.style.display = 'flex';
+            taskList.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            fetch('/api/promai/tasks')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API返回的数据:', data);
+                    console.log('数据类型:', typeof data);
+                    console.log('是否为数组:', Array.isArray(data));
+
+                    // 确保data是数组
+                    const taskArray = Array.isArray(data) ? data : (data ? [data] : []);
+                    console.log('处理后的任务数组:', taskArray);
+
+                    tasks = taskArray.map(task => ({
+                        ...task,
+                        startTime: new Date(task.startTime),
+                        endTime: task.endTime ? new Date(task.endTime) : null
+                    }));
+
+                    // 隐藏加载状态
+                    loadingState.style.display = 'none';
+
+                    loadTasks();
+
+                    // 如果有运行中的任务，设置定时刷新
+                    const hasRunningTask = tasks.some(task => task.status === 'running');
+                    if (hasRunningTask) {
+                        // 清除现有的定时器（避免重复设置）
+                        if (window.progressInterval) {
+                            clearInterval(window.progressInterval);
+                        }
+                        window.progressInterval = setInterval(() => {
+                            fetchTasksFromBackend();
+                        }, 2000);
+                    } else {
+                        // 没有运行中的任务，清除定时器
+                        if (window.progressInterval) {
+                            clearInterval(window.progressInterval);
+                            window.progressInterval = null;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch tasks:', error);
+                    // 显示错误状态
+                    loadingState.style.display = 'none';
+                    taskList.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    emptyState.innerHTML = `
+                        <div class="empty-state-icon">❌</div>
+                        <h2>加载失败</h2>
+                        <p>无法获取任务数据：${error.message}</p>
+                        <button class="create-btn" onclick="fetchTasksFromBackend()">
+                            <span>🔄</span>
+                            <span>重试</span>
+                        </button>
+                    `;
+                });
+        }
+    </script>
+</body>
+
+</html>
