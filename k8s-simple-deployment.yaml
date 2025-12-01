@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: promai
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promai
+  namespace: promai
+  labels:
+    app: promai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: promai
+  template:
+    metadata:
+      labels:
+        app: promai
+    spec:
+      containers:
+      - name: promai
+        image: promai:latest  # 需要构建并推送镜像
+        ports:
+        - containerPort: 8091
+        env:
+        - name: PROMETHEUS_URL
+          value: "http://prometheus.k8s.bruneihealth.kubehan.cn"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: config
+        configMap:
+          name: promai-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promai-config
+  namespace: promai
+data:
+  config.yaml: |
+    prometheus_url: "http://prometheus.k8s.bruneihealth.kubehan.cn"
+    
+    # 多数据源配置
+    data_sources:
+      - name: "bruneihealth"
+        url: "http://prometheus.k8s.bruneihealth.kubehan.cn"
+      - name: "cluster2" 
+        url: "http://prometheus.cluster2.example.com"
+      - name: "test-cluster"
+        url: "http://prometheus.test.example.com"
+    
+    project_name: "BruneiHealth巡检报告"
+    
+    # 定时任务
+    cron_schedule: "03 10,17 * * *"
+    
+    # 报告清理
+    report_cleanup:
+      enabled: true
+      max_age: 7
+      cron_schedule: "0 0 * * *"
+    
+    # 通知配置
+    notifications:
+      wechat_work:
+        enabled: true
+        webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=0c4ef257-a6f0-430c-b454-d2b82bbd6e53"
+        proxy_url: ""
+        report_url: "http://your-k8s-node:30080"  # 需要替换为实际访问地址
+    
+    metric_types:
+      - type: "基础资源使用情况"
+        metrics:
+          - name: "CPU使用率"
+            description: "节点CPU使用率统计"
+            query: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+            threshold: 80
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+          
+          - name: "内存使用率"
+            description: "节点内存使用率统计"
+            query: "100 - ((node_memory_MemAvailable_bytes * 100) / node_memory_MemTotal_bytes)"
+            threshold: 85
+            threshold_type: "greater"
+            unit: "%"
+            labels:
+              instance: "节点"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: promai-service
+  namespace: promai
+spec:
+  type: NodePort  # 使用NodePort可以从外部访问
+  selector:
+    app: promai
+  ports:
+  - protocol: TCP
+    port: 8091
+    targetPort: 8091
+    nodePort: 30080  # 指定外部访问端口

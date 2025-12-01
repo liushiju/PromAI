@@ -50,9 +50,10 @@ type MetricStatus struct {
 }
 
 type StatusData struct {
-	Summary StatusSummary
-	Metrics []MetricStatus
-	Dates   []string
+	Summary    StatusSummary
+	Metrics    []MetricStatus
+	Dates      []string
+	Datasource string
 }
 
 func GenerateStatusData(days int) (*StatusData, error) {
@@ -74,11 +75,18 @@ func GenerateStatusData(days int) (*StatusData, error) {
 	return data, nil
 }
 
-func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config) (*StatusData, error) {
+func CollectMetricStatus(client metrics.PrometheusAPI, config *config.Config, datasource string) (*StatusData, error) {
 	data, err := GenerateStatusData(7) // 显示最近7天的数据
 	if err != nil {
 		log.Printf("生成状态数据失败: %v", err)
 		return nil, err
+	}
+
+	// 设置数据源信息
+	if datasource != "" {
+		data.Datasource = datasource
+	} else {
+		data.Datasource = config.PrometheusURL
 	}
 
 	log.Printf("开始收集指标状态数据，时间范围: %v", data.Dates)
@@ -163,6 +171,7 @@ PromQL: %s
 1. 打开 Prometheus UI
 2. 粘贴查询: %s
 3. 设置时间范围为: %s 到 %s
+4. 使用客户端: %T
 -------------------`,
 		metric.Name,
 		startTime.Format("2006-01-02 15:04:05"),
@@ -170,7 +179,8 @@ PromQL: %s
 		metric.Query,
 		metric.Query,
 		startTime.Format("2006-01-02 15:04:05"),
-		endTime.Format("2006-01-02 15:04:05"))
+		endTime.Format("2006-01-02 15:04:05"),
+		client)
 
 	// 直接使用原始查询语句
 	result, _, err := client.QueryRange(ctx, metric.Query, v1.Range{

@@ -22,6 +22,31 @@ http://localhost:8091/status
 ![status](images/status.png)
 
 
+【监测报告】巡检报告巡检结果 ⚠️ 异常
+
+### ⏰ 巡检时间
+2025-09-25 17:40:26
+
+### 📊 分类巡检结果
+**✅Middleware 组件-mongo**：总10个，异常0个（严重0，警告0），正常10个
+**❌Middleware 组件-mysql**：总6个，异常1个（严重1，警告0），正常5个
+**✅Middleware 组件-pg**：总0个，异常0个（严重0，警告0），正常0个
+**✅Middleware 组件-redis**：总0个，异常0个（严重0，警告0），正常0个
+**❌PaaS平台巡检**：总963个，异常37个（严重8，警告29），正常926个
+**❌基础资源使用情况**：总420个，异常265个（严重15，警告250），正常155个
+**✅接入层**：总7个，异常0个（严重0，警告0），正常7个
+**✅服务/应用**：总4个，异常0个（严重0，警告0），正常4个
+**⚠️监控组件采集状态**：总254个，异常254个（严重0，警告254），正常0个
+
+### 📈 整体统计
+**总指标数**：1664个
+**异常指标**：557个（严重24个，警告533个）
+**正常指标**：1107个
+
+📋[点击查看完整报告](http://0.0.0.0:9099/api/promai/reports/inspection_report_20250925_174025.html)
+
+⏰ 生成时间：2025-09-25 17:40:26
+
 ## 功能特点
 
 - 支持多种指标类型的监控（基础资源、Kubernetes、应用服务等）
@@ -32,6 +57,7 @@ http://localhost:8091/status
 - 支持多维度数据分析和展示
 - 自动计算关键统计指标（最大值、最小值、平均值等）
 - 美观的可视化界面，支持响应式布局
+- **新增：支持多数据源配置，可通过datasource参数动态切换Prometheus集群**
 
 ## 系统要求
 
@@ -77,15 +103,20 @@ metric_types:
 - `threshold`: 指标阈值
 - `unit`: 指标单位
 - `labels`: 标签别名
-- `threshold_type`: 阈值比较方式: "greater", "less", "equal", "greater_equal", "less_equal"
+- `threshold_type`: 阈值比较方式: "greater", "greater_equal", "less", "less_equal", "equal", "not_equal"
 
-```txt
-greater: 表示值必须大于阈值才被视为 "critical" 状态。
-greater_equal: 表示值必须大于或等于阈值才被视为 "critical" 状态。
-less: 表示值必须小于阈值才被视为 "normal" 状态。
-less_equal: 表示值必须小于或等于阈值才被视为 "normal" 状态。
-equal: 表示值必须等于阈值才被视为 "normal" 状态。
-```
+    `greater`: 当值大于阈值时告警 (例如：CPU使用率 > 80% 告警)
+
+    `greater_equal`: 当值大于等于阈值时告警 (例如：CPU使用率 >= 80% 告警)
+
+    `less`: 当值小于阈值时告警 (例如：可用节点数 < 3 告警)
+
+    `less_equal`: 当值小于等于阈值时告警 (例如：可用节点数 <= 3 告警)
+
+    `equal`: 值必须等于阈值才正常 (例如：版本号必须匹配)
+
+    `not_equal`: 值不等于阈值才正常 (例如：版本号不匹配时告警)
+- `threshold_status`: 阈值状态: "normal", "critical" 根据阈值类型不同，告警状态也不同
 
 ## 快速开始
 
@@ -133,6 +164,8 @@ kubectl apply -f deploy/deployment.yaml
 
 在配置文件中添加所需的监控指标后，运行程序将生成 HTML 报告。报告中将包含各个指标的当前状态、历史趋势图表以及详细的表格数据。
 
+### 基本使用
+
 1. 修改配置文件中的Prometheus地址为自己的地址
 2. 修改配置文件中的指标
 3. 运行程序 默认运行在8091端口，通过访问http://localhost:8091/getreport 查看报告
@@ -142,23 +175,80 @@ go build -o PromAI main.go
 ./PromAI -config config/config.yaml
 ```
 
-# Prometheus Automated Inspection 未来新功能规划列表
+### 多数据源使用
 
-1. 多数据源支持
-2. 自定义仪表板
-3. 历史数据存储
-4. 智能告警
-5. API 接口
-6. 用户角色和权限管理
-7. 数据导出功能
-8. 集成 CI/CD 流程
-9. 可视化组件库
-10. 多语言支持
-11. 移动端支持
-12. 社区和插件支持
-13. 性能优化
-14. 用户反馈和建议收集
-15. xxx
+支持通过URL参数`datasource`动态切换不同的Prometheus集群：
+
+1. 在配置文件中配置多个数据源：
+
+```yaml
+data_sources:
+  - name: "cluster1"
+    url: "http://prometheus.cluster1.example.com"
+  - name: "cluster2" 
+    url: "http://prometheus.cluster2.example.com"
+  - name: "test-cluster"
+    url: "http://prometheus.test.example.com"
+```
+
+2. 使用datasource参数访问特定集群的报告：
+
+```bash
+# 获取cluster1的报告
+http://localhost:8091/api/promai/getreport?datasource=cluster1
+
+# 获取cluster2的报告
+http://localhost:8091/api/promai/getreport?datasource=cluster2
+
+# 查看cluster1的状态页面
+http://localhost:8091/api/promai/status?datasource=cluster1
+
+# 不带datasource参数时使用默认的prometheus_url
+http://localhost:8091/api/promai/getreport
+```
+
+# Prometheus Automated Inspection 已实现功能
+
+✅ **已实现的核心功能**
+
+- ✅ 多数据源支持
+- ✅ 自定义仪表板
+- ✅ 智能告警（警告、严重两级告警）
+- ✅ API 接口 (/getreport, /status, /health)
+- ✅ 用户角色和权限管理
+- ✅ 数据导出功能（HTML报告）
+- ✅ 响应式设计（移动端支持）
+- ✅ 实时状态监控看板
+- ✅ 灵活的阈值配置系统
+- ✅ 完整的指标统计分析
+
+# 项目特色
+
+## 🎯 智能告警系统
+支持多种阈值比较方式，适应不同监控场景需求：
+- 数值范围监控（CPU、内存使用率）
+- 计数监控（可用节点数、连接数）
+- 精确匹配监控（版本号、状态检查）
+
+## 📊 可视化报告
+自动生成包含统计信息、趋势图表和详细数据的HTML报告：
+- 概览统计卡片
+- 资源使用情况图表
+- 按状态筛选的数据表格
+- 响应式设计，支持各种设备
+
+## 🔄 实时状态监控
+提供服务健康状态看板，实时显示：
+- 各类别巡检结果统计
+- 异常指标详情
+- 总体健康度评估
+
+## 🔧 灵活配置系统
+支持YAML配置文件，可自定义：
+- Prometheus数据源
+- 监控指标类型
+- 阈值和告警规则
+- 标签别名显示
 
 ## 贡献
 
@@ -174,6 +264,13 @@ go build -o PromAI main.go
             <img src="https://avatars.githubusercontent.com/u/69997301?v=4" width="100;" alt="kubehan"/>
             <br />
             <sub><b>Kubehan</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/junlintianxiazhifulinzhongguo">
+            <img src="https://avatars.githubusercontent.com/u/18591729?v=4" width="100;" alt="junlintianxiazhifulinzhongguo"/>
+            <br />
+            <sub><b>Junlintianxiazhifulinzhongguo</b></sub>
         </a>
     </td>
     <td align="center">
@@ -200,6 +297,11 @@ go build -o PromAI main.go
 </table>
 <!-- readme: collaborators,contributors -end -->
 
+## 联系我们
+微信扫码添加我为好友，备注“PromAI”，即可加入PromAI交流群。
+微信号：Kubehan
+微信公众号：云原生知识栈
+![1764516172438](image/README/1764516172438.png)
 ## 许可证
 
 该项目采用 MIT 许可证，详细信息请查看 LICENSE 文件。

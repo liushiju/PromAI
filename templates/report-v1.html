@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Project}} - 监控巡检报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #3b82f6 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .overview-section {
+            padding: 2rem;
+            background: var(--gray-50);
+        }
+        
+        .overview-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .overview-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .overview-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .overview-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .overview-card.success .icon { color: var(--success-color); }
+        .overview-card.warning .icon { color: var(--warning-color); }
+        .overview-card.danger .icon { color: var(--danger-color); }
+        .overview-card.info .icon { color: var(--primary-color); }
+        
+        .overview-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .overview-card .label {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        
+        .status-indicator.success {
+            background: #d1fae5;
+            color: var(--success-color);
+        }
+        
+        .status-indicator.warning {
+            background: #fed7aa;
+            color: var(--warning-color);
+        }
+        
+        .status-indicator.danger {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h3 {
+            margin: 0 0 1rem 0;
+            color: #374151;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+        
+        .stat-item .label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-item .value {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .stat-item .value.danger { color: var(--danger-color); }
+        .stat-item .value.warning { color: var(--warning-color); }
+        .stat-item .value.success { color: var(--success-color); }
+
+              .section {
+            margin: 2rem;
+        }
+        
+        .section h2 {
+            color: #374151;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section h2 i {
+            color: var(--primary-color);
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+        }
+        
+        .chart-wrapper {
+            height: 400px;
+            position: relative;
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem;
+        }
+        
+        /* 表格样式 */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 2rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        th {
+            background: var(--gray-50);
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        tr:hover {
+            background: var(--gray-50);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-badge.normal {
+            background: #d1fae5;
+            color: var(--success-color);
+        }
+        
+        .status-badge.warning {
+            background: #fed7aa;
+            color: var(--warning-color);
+        }
+        
+        .status-badge.critical {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+        
+        .label-value {
+            display: inline-block;
+            background: var(--gray-100);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            color: #6b7280;
+        }
+        
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            margin-left: 0.5rem;
+        }
+        
+        .trend-up { color: var(--danger-color); }
+        .trend-down { color: var(--success-color); }
+        .trend-stable { color: var(--warning-color); }
+
+        /* 响应式支持 */
+        @media screen and (max-width: 1200px) {
+            .container {
+                padding: 10px;
+            }
+            
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            td, th {
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> {{.Project}}</h1>
+            <p class="subtitle">监控巡检报告 - {{.Timestamp.Format "2006-01-02 15:04:05"}}</p>
+        </div>
+
+        <!-- 总体概览 -->
+        <div class="overview-section">
+            {{/* 计算总体统计数据 - 由于Go模板不支持数学运算，我们使用简化显示 */}}
+            <div class="overview-cards">
+                <div class="overview-card info">
+                    <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="value">
+                        {{range $type, $group := .MetricGroups}}
+                            {{if eq $type "基础资源使用情况"}}
+                                {{$group.Stats.TotalCount}}
+                            {{end}}
+                        {{end}}
+                    </div>
+                    <div class="label">总监控指标</div>
+                </div>
+                
+                <div class="overview-card success">
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="value">
+                        {{range $type, $group := .MetricGroups}}
+                            {{if eq $type "基础资源使用情况"}}
+                                {{$group.Stats.TotalCount}}
+                            {{end}}
+                        {{end}}
+                    </div>
+                    <div class="label">正常指标</div>
+                </div>
+                
+                <div class="overview-card warning">
+                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="value">
+                        {{range $type, $group := .MetricGroups}}
+                            {{if eq $type "基础资源使用情况"}}
+                                {{$group.Stats.AlertCount}}
+                            {{end}}
+                        {{end}}
+                    </div>
+                    <div class="label">异常指标</div>
+                </div>
+                
+                <div class="overview-card danger">
+                    <div class="icon"><i class="fas fa-fire"></i></div>
+                    <div class="value">
+                        {{range $type, $group := .MetricGroups}}
+                            {{if eq $type "基础资源使用情况"}}
+                                {{$group.Stats.CriticalCount}}
+                            {{end}}
+                        {{end}}
+                    </div>
+                    <div class="label">严重告警</div>
+                    <div class="status-indicator">
+                        {{range $type, $group := .MetricGroups}}
+                            {{if eq $type "基础资源使用情况"}}
+                                {{if gt $group.Stats.CriticalCount 0}}紧急处理
+                                {{else if gt $group.Stats.AlertCount 0}}需要关注
+                                {{else}}系统正常{{end}}
+                            {{end}}
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细概览卡片 -->
+        <div class="summary-cards">
+            {{range $type, $group := .MetricGroups}}
+            <div class="card">
+                <h3><i class="fas fa-server"></i> {{$type}}</h3>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="label">总指标数</div>
+                        <div class="value">{{$group.Stats.TotalCount}}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">异常指标</div>
+                        <div class="value {{if gt $group.Stats.AlertCount 0}}danger{{else}}success{{end}}">
+                            {{$group.Stats.AlertCount}}
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">严重告警</div>
+                        <div class="value {{if gt $group.Stats.CriticalCount 0}}danger{{else}}success{{end}}">
+                            {{$group.Stats.CriticalCount}}
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="label">警告告警</div>
+                        <div class="value {{if gt $group.Stats.WarningCount 0}}warning{{else}}success{{end}}">
+                            {{$group.Stats.WarningCount}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- 图表部分 -->
+        <div class="section">
+            <h2><i class="fas fa-chart-bar"></i> 资源使用概览</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="resourceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细指标表格 -->
+        {{range $type, $group := .MetricGroups}}
+        <div class="section">
+            <h2><i class="fas fa-list-ul"></i> {{$type}} 监控指标</h2>
+            {{range $metricName, $metrics := $group.MetricsByName}}
+            <div class="table-container">
+                <div style="padding: 1rem; border-bottom: 1px solid var(--gray-200);">
+                    <h3 style="margin: 0; color: #374151;"><i class="fas fa-chart-line"></i> {{$metricName}}</h3>
+                </div>
+                {{if eq (len $metrics) 0}}
+                    <div style="padding: 2rem; text-align: center; color: #6b7280;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p>未查询到数据</p>
+                    </div>
+                {{else}}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>指标名称</th>
+                            {{$headerLabels := (index $metrics 0).Labels}}
+                            {{range $headerLabels}}
+                                <th>{{.Alias}}</th>
+                            {{end}}
+                            <th>当前值</th>
+                            <th>状态</th>
+                            <th>检测时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range $metric := $metrics}}
+                        <tr>
+                            <td>
+                                <strong>{{$metric.Name}}</strong>
+                            </td>
+                            {{range $headerLabels}}
+                                {{$labelName := .Name}}
+                                {{range $metricLabel := $metric.Labels}}
+                                    {{if eq $metricLabel.Name $labelName}}
+                                        <td>
+                                            <span class="label-value">{{$metricLabel.Value}}</span>
+                                        </td>
+                                    {{end}}
+                                {{end}}
+                            {{end}}
+                            <td>
+                                <span class="metric-value">{{printf "%.2f" $metric.Value}}{{$metric.Unit}}</span>
+                                {{if le $metric.Value $metric.Threshold}}
+                                    <span class="trend-indicator trend-down">
+                                        <i class="fas fa-arrow-down"></i>正常
+                                    </span>
+                                {{else}}
+                                    <span class="trend-indicator trend-up">
+                                        <i class="fas fa-arrow-up"></i>超限
+                                    </span>
+                                {{end}}
+                            </td>
+                            <td>
+                                <span class="status-badge {{$metric.Status}}">
+                                    {{if eq .Status "normal"}}<i class="fas fa-check"></i> 正常
+                                    {{else if eq .Status "warning"}}<i class="fas fa-exclamation-triangle"></i> 警告
+                                    {{else if eq .Status "critical"}}<i class="fas fa-times-circle"></i> 严重
+                                    {{else}}{{.Status}}{{end}}
+                                </span>
+                            </td>
+                            <td>
+                                <small style="color: #6b7280;">{{$metric.Timestamp.Format "01-02 15:04"}}</small>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+<script>
+    // 设置图表主题
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        initCharts();
+    });
+    
+    function initCharts() {
+        const data = {{.MetricGroups}};
+        
+        // 计算总体统计数据
+        const totalStats = calculateTotalStats(data);
+        
+        // 创建多种图表
+        createResourceChart(data);
+        createAlertDistributionChart(totalStats);
+        createStatusPieChart(totalStats);
+    }
+    
+    function calculateTotalStats(data) {
+        let total = 0, normal = 0, warning = 0, critical = 0;
+        
+        for (const [type, group] of Object.entries(data)) {
+            if (group.Stats) {
+                total += group.Stats.TotalCount || 0;
+                normal += (group.Stats.TotalCount || 0) - (group.Stats.AlertCount || 0);
+                warning += group.Stats.WarningCount || 0;
+                critical += group.Stats.CriticalCount || 0;
+            }
+        }
+        
+        return { total, normal, warning, critical };
+    }
+
+      function createResourceChart(data) {
+        const ctx = document.getElementById('resourceChart').getContext('2d');
+        
+        // 获取资源数据
+        const resourceData = getResourceData(data);
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: resourceData.labels,
+                datasets: [
+                    {
+                        label: 'CPU使用率 (%)',
+                        data: resourceData.cpu,
+                        backgroundColor: resourceData.cpu.map(val => getColorByValue(val, 80, 90)),
+                        borderColor: resourceData.cpu.map(val => getColorByValue(val, 80, 90)),
+                        borderWidth: 1
+                    },
+                    {
+                        label: '内存使用率 (%)',
+                        data: resourceData.memory,
+                        backgroundColor: resourceData.memory.map(val => getColorByValue(val, 80, 90)),
+                        borderColor: resourceData.memory.map(val => getColorByValue(val, 80, 90)),
+                        borderWidth: 1
+                    },
+                    {
+                        label: '磁盘使用率 (%)',
+                        data: resourceData.disk,
+                        backgroundColor: resourceData.disk.map(val => getColorByValue(val, 80, 90)),
+                        borderColor: resourceData.disk.map(val => getColorByValue(val, 80, 90)),
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '资源使用率对比',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function createAlertDistributionChart(stats) {
+        // 创建告警分布图表
+        const chartContainer = document.querySelector('.chart-container');
+        const pieContainer = document.createElement('div');
+        pieContainer.className = 'chart-grid';
+        pieContainer.innerHTML = `
+            <div class="chart-wrapper">
+                <canvas id="alertChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="statusChart"></canvas>
+            </div>
+        `;
+        chartContainer.appendChild(pieContainer);
+        
+        // 告警分布饼图
+        new Chart(document.getElementById('alertChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['严重告警', '警告告警', '正常指标'],
+                datasets: [{
+                    data: [stats.critical, stats.warning, stats.normal],
+                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '告警分布',
+                        font: { size: 14, weight: 'bold' }
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    function createStatusPieChart(stats) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'pie',
+            data: {
+                labels: ['异常指标', '正常指标'],
+                datasets: [{
+                    data: [stats.critical + stats.warning, stats.normal],
+                    backgroundColor: ['#ef4444', '#10b981'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '整体健康状况',
+                        font: { size: 14, weight: 'bold' }
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    function getResourceData(data) {
+        const labels = [];
+        const cpu = [];
+        const memory = [];
+        const disk = [];
+        
+        for (const [type, group] of Object.entries(data)) {
+            if (group.MetricsByName) {
+                // CPU数据
+                if (group.MetricsByName['CPU使用率']) {
+                    group.MetricsByName['CPU使用率'].forEach(metric => {
+                        const instance = getInstanceLabel(metric);
+                        if (instance && !labels.includes(instance)) {
+                            labels.push(instance);
+                            cpu.push(metric.Value);
+                        }
+                    });
+                }
+                
+                // 内存数据
+                if (group.MetricsByName['内存使用率']) {
+                    group.MetricsByName['内存使用率'].forEach(metric => {
+                        const instance = getInstanceLabel(metric);
+                        const index = labels.indexOf(instance);
+                        if (index !== -1) {
+                            memory[index] = metric.Value;
+                        }
+                    });
+                }
+                
+                // 磁盘数据
+                if (group.MetricsByName['磁盘使用率']) {
+                    group.MetricsByName['磁盘使用率'].forEach(metric => {
+                        const instance = getInstanceLabel(metric);
+                        const index = labels.indexOf(instance);
+                        if (index !== -1) {
+                            disk[index] = metric.Value;
+                        }
+                    });
+                }
+            }
+        }
+        
+        return { labels, cpu, memory, disk };
+    }
+    
+    function getInstanceLabel(metric) {
+        const instanceLabel = metric.Labels.find(label => 
+            label.Name === "instance" || label.Name === "node"
+        );
+        return instanceLabel ? instanceLabel.Value.split(':')[0] : 'Unknown';
+    }
+    
+    function getColorByValue(value, warningThreshold, criticalThreshold) {
+        if (value >= criticalThreshold) return '#ef4444';
+        if (value >= warningThreshold) return '#f59e0b';
+        return '#10b981';
+    }
+</script>
+</body>
+</html>
