@@ -17,4 +17,4 @@ COPY --from=builder /build/reports /app/reports/
 COPY --from=builder /build/templates /app/templates/
 EXPOSE 8091
 # 运行应用程序
-CMD ["./PromAI", "-port", "8091"]
+CMD ["./PromAI", "-port", ":8091"]
