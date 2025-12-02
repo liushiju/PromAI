@@ -274,6 +274,13 @@ http://localhost:8091/api/promai/getreport
         </a>
     </td>
     <td align="center">
+        <a href="https://github.com/KingsBa">
+            <img src="https://avatars.githubusercontent.com/u/247204263?v=4" width="100;" alt="KingsBa"/>
+            <br />
+            <sub><b>KingsBa</b></sub>
+        </a>
+    </td>
+    <td align="center">
         <a href="https://github.com/liushiju">
             <img src="https://avatars.githubusercontent.com/u/34912508?v=4" width="100;" alt="liushiju"/>
             <br />
